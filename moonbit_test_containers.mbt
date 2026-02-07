@@ -1,20 +1,243 @@
-///|
-pub fn fib(n : Int) -> Int64 {
-  loop (n, 0L, 1L) {
-    (0, _, b) => b
-    (i, a, b) => continue (i - 1, b, a + b)
+// Testcontainers for MoonBit
+// A library for creating and managing Docker containers for integration testing
+
+/// Error type for testcontainers operations
+pub enum TestContainerError {
+  DockerCommandFailed(String)
+  ContainerNotFound(String)
+  PortMappingFailed(String)
+  InvalidConfiguration(String)
+} derive(Show, Eq)
+
+/// Convert error to string for display
+pub fn TestContainerError::to_string(self : TestContainerError) -> String {
+  match self {
+    DockerCommandFailed(msg) => "Docker command failed: \{msg}"
+    ContainerNotFound(id) => "Container not found: \{id}"
+    PortMappingFailed(msg) => "Port mapping failed: \{msg}"
+    InvalidConfiguration(msg) => "Invalid configuration: \{msg}"
   }
 }
 
-///|
-/// data is a labelled argument without default value having type Array[Int]
-/// start is an optional labelled argument with default value 0 having type Int
-/// length is an optional labelled argument without default value having type Option[Int]
-pub fn sum(data~ : Array[Int], start? : Int = 0, length? : Int) -> Int {
-  let end = if length is Some(length) { start + length } else { data.length() }
-  for i = start, sum = 0; i < end; i = i + 1, sum = sum + data[i] {
+/// Container image configuration
+pub struct ContainerImage {
+  name : String
+  tag : String
+  exposed_ports : Array[Int]
+  env_vars : Array[(String, String)]
+  cmd : Array[String]
+}
 
-  } else {
-    sum
+/// Running container instance
+pub struct Container {
+  id : String
+  image : ContainerImage
+  port_mappings : Array[(Int, Int)] // (container_port, host_port)
+}
+
+/// Create a new container image configuration
+pub fn ContainerImage::new(name : String, tag : String) -> ContainerImage {
+  {
+    name,
+    tag,
+    exposed_ports: [],
+    env_vars: [],
+    cmd: [],
   }
+}
+
+/// Add an exposed port to the container configuration
+pub fn ContainerImage::with_exposed_port(self : ContainerImage, port : Int) -> ContainerImage {
+  let ports = self.exposed_ports.copy()
+  ports.push(port)
+  { ..self, exposed_ports: ports }
+}
+
+/// Add an environment variable to the container configuration
+pub fn ContainerImage::with_env_var(
+  self : ContainerImage,
+  key : String,
+  value : String
+) -> ContainerImage {
+  let vars = self.env_vars.copy()
+  vars.push((key, value))
+  { ..self, env_vars: vars }
+}
+
+/// Set the command to run in the container
+pub fn ContainerImage::with_cmd(self : ContainerImage, cmd : Array[String]) -> ContainerImage {
+  { ..self, cmd }
+}
+
+/// Execute a Docker CLI command and return the output
+async fn exec_docker(args : Array[String]) -> Result[String, TestContainerError] {
+  let command = "docker"
+  try {
+    let (status, output) = @process.collect_output_merged(command, args)
+    let output_view = output.text()
+    // Convert StringView to String and trim
+    let trimmed = output_view.trim()
+    let output_str = "\{trimmed}"
+    if status == 0 {
+      Ok(output_str)
+    } else {
+      Err(DockerCommandFailed(output_str))
+    }
+  } catch {
+    e => Err(DockerCommandFailed(e.to_string()))
+  }
+}
+
+/// Start a container based on the image configuration
+pub async fn ContainerImage::start(self : ContainerImage) -> Result[Container, TestContainerError] {
+  // Build docker run command arguments
+  let args : Array[String] = ["run", "-d"]
+
+  // Add port mappings (-P for random host ports)
+  if self.exposed_ports.length() > 0 {
+    args.push("-P")
+  }
+
+  // Add environment variables
+  for i = 0; i < self.env_vars.length(); i = i + 1 {
+    let (key, value) = self.env_vars[i]
+    args.push("-e")
+    args.push("\{key}=\{value}")
+  }
+
+  // Add image name and tag
+  args.push("\{self.name}:\{self.tag}")
+
+  // Add command if specified
+  for i = 0; i < self.cmd.length(); i = i + 1 {
+    args.push(self.cmd[i])
+  }
+
+  // Execute docker run
+  match exec_docker(args) {
+    Ok(container_id) => {
+      let container = {
+        id: container_id,
+        image: self,
+        port_mappings: [],
+      }
+      // Get port mappings if ports were exposed
+      match container.update_port_mappings() {
+        Ok(_) => Ok(container)
+        Err(e) => Err(e)
+      }
+    }
+    Err(e) => Err(e)
+  }
+}
+
+/// Update port mappings by querying Docker
+async fn Container::update_port_mappings(self : Container) -> Result[Unit, TestContainerError] {
+  if self.image.exposed_ports.length() == 0 {
+    return Ok(())
+  }
+
+  // Get port mappings using docker port command
+  for i = 0; i < self.image.exposed_ports.length(); i = i + 1 {
+    let container_port = self.image.exposed_ports[i]
+    let args = ["port", self.id, container_port.to_string()]
+
+    match exec_docker(args) {
+      Ok(output) => {
+        // Parse output like "0.0.0.0:32768"
+        // Format: [host]:port or 0.0.0.0:port
+        match parse_port_mapping(output) {
+          Some(host_port) => {
+            self.port_mappings.push((container_port, host_port))
+          }
+          None => {
+            return Err(
+              PortMappingFailed("Failed to parse port mapping: \{output}"),
+            )
+          }
+        }
+      }
+      Err(e) => return Err(e)
+    }
+  }
+
+  Ok(())
+}
+
+/// Parse port mapping output from docker port command
+/// Expected format: "0.0.0.0:32768" or "[::]:32768"
+fn parse_port_mapping(output : String) -> Option[Int] {
+  // Find the last colon and extract the port number after it
+  let chars = output.to_array()
+  let mut last_colon_idx = -1
+
+  for i = 0; i < chars.length(); i = i + 1 {
+    if chars[i] == ':' {
+      last_colon_idx = i
+    }
+  }
+
+  if last_colon_idx == -1 || last_colon_idx == chars.length() - 1 {
+    return None
+  }
+
+  // Extract port number string
+  let port_start = last_colon_idx + 1
+  let port_chars : Array[Char] = []
+  for i = port_start; i < chars.length(); i = i + 1 {
+    port_chars.push(chars[i])
+  }
+  let port_str = String::from_array(port_chars)
+
+  // Parse to integer
+  try {
+    Some(@strconv.parse_int(port_str))
+  } catch {
+    _ => None
+  }
+}
+
+/// Get the host port mapped to a container port
+pub fn Container::get_host_port(
+  self : Container,
+  container_port : Int
+) -> Option[Int] {
+  for i = 0; i < self.port_mappings.length(); i = i + 1 {
+    let (cport, hport) = self.port_mappings[i]
+    if cport == container_port {
+      return Some(hport)
+    }
+  }
+  None
+}
+
+/// Get the container ID
+pub fn Container::get_id(self : Container) -> String {
+  self.id
+}
+
+/// Stop the container
+pub async fn Container::stop(self : Container) -> Result[Unit, TestContainerError] {
+  let args = ["stop", self.id]
+  match exec_docker(args) {
+    Ok(_) => Ok(())
+    Err(e) => Err(e)
+  }
+}
+
+/// Remove the container
+pub async fn Container::remove(self : Container) -> Result[Unit, TestContainerError] {
+  let args = ["rm", self.id]
+  match exec_docker(args) {
+    Ok(_) => Ok(())
+    Err(e) => Err(e)
+  }
+}
+
+/// Stop and remove the container (cleanup)
+pub async fn Container::cleanup(self : Container) -> Result[Unit, TestContainerError] {
+  // Try to stop first, then remove
+  // Ignore errors from stop (container might already be stopped)
+  let _ = self.stop()
+  self.remove()
 }

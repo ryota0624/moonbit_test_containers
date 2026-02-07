@@ -1,1 +1,8 @@
-{}
+{
+  "import": [
+    "moonbitlang/async/process",
+    "moonbitlang/async",
+    "moonbitlang/core/strconv",
+    "moonbitlang/core/test"
+  ]
+}
