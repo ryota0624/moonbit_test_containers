@@ -1,4 +1,5 @@
-///|
+// Example usage of testcontainers library
 fn main {
-  println(@lib.fib(10))
+  println("Testcontainers for MoonBit")
+  println("Run `moon test --target native` to execute integration tests")
 }
