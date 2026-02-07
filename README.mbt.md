@@ -9,6 +9,7 @@ A MoonBit implementation of Testcontainers, a library for creating and managing 
 - **Environment Variables**: Configure containers with custom environment variables
 - **Fluent API**: Builder pattern for intuitive container configuration
 - **Async Support**: Built on MoonBit's async primitives for efficient I/O
+- **Wait Strategies**: TCP port, HTTP endpoint, and simple delay strategies
 
 ## Requirements
 
@@ -35,7 +36,8 @@ And in your `moon.pkg.json`:
 {
   "import": [
     "moonbitlang/async",
-    "moonbitlang/async/process"
+    "moonbitlang/async/process",
+    "moonbitlang/async/http"
   ]
 }
 ```
@@ -93,7 +95,7 @@ match container {
 
 ### Wait Strategies
 
-Wait strategies ensure that containers are fully ready before your tests begin. This is essential for services that take time to initialize (like databases).
+Wait strategies ensure that containers are fully ready before your tests begin. This is essential for services that take time to initialize (like databases, web servers, and APIs).
 
 #### TCP Port Wait
 
@@ -104,6 +106,41 @@ let container = ContainerImage::new("redis", "7.2.4")
   .with_exposed_port(6379)
   .with_wait_for(WaitStrategy::TcpPort(6379))
   .with_wait_timeout(30)  // optional, defaults to 60 seconds
+  .start()
+```
+
+#### HTTP Endpoint Wait
+
+Wait for an HTTP endpoint to return a specific status code:
+
+```moonbit
+let container = ContainerImage::new("nginx", "1.25-alpine")
+  .with_exposed_port(80)
+  .with_wait_for(WaitStrategy::HttpGet("/", 200))
+  .with_wait_timeout(30)
+  .start()
+
+match container {
+  Ok(c) => {
+    // Nginx is now ready and responding to HTTP requests
+    match c.get_host_port(80) {
+      Some(port) => println("Nginx ready on port: \{port}")
+      None => println("Port not mapped")
+    }
+    let _ = c.cleanup()
+  }
+  Err(e) => println("Failed: \{e.to_string()}")
+}
+```
+
+You can also wait for custom paths and status codes:
+
+```moonbit
+// Wait for a health check endpoint to return 200
+let container = ContainerImage::new("myapp", "latest")
+  .with_exposed_port(8080)
+  .with_wait_for(WaitStrategy::HttpGet("/health", 200))
+  .with_wait_timeout(60)
   .start()
 ```
 
@@ -164,6 +201,7 @@ Create and configure a container image:
 Strategies for waiting until a container is ready:
 
 - `WaitStrategy::TcpPort(port: Int)` - Wait for TCP port to be open
+- `WaitStrategy::HttpGet(path: String, expected_status: Int)` - Wait for HTTP endpoint to return expected status code
 - `WaitStrategy::Seconds(seconds: Int)` - Wait for a fixed duration
 
 ### `Container`
@@ -193,7 +231,8 @@ moon test --target native
 ## Current Limitations
 
 - **Backend Support**: Only native/LLVM backend is supported (wasm-gc and js backends are not supported due to process execution requirements)
-- **Wait Strategies**: TCP port and simple delay are implemented; log message and HTTP endpoint waiting are planned
+- **Wait Strategies**: HTTP endpoint wait uses the first exposed port; log message waiting is planned
+- **HTTP Support**: Only HTTP (not HTTPS), GET method only, status code checking only
 - **Network Management**: Custom networks are not supported yet
 - **Volume Management**: Volume mounting is not yet supported
 - **Platform**: Linux and macOS only (Windows support requires investigation)
@@ -201,7 +240,11 @@ moon test --target native
 ## Future Enhancements
 
 - [x] Wait strategies - TCP port and delay (implemented)
-- [ ] Wait strategies - log message and HTTP endpoint
+- [x] Wait strategies - HTTP endpoint (implemented)
+- [ ] Wait strategies - log message
+- [ ] HTTPS support for HTTP wait strategy
+- [ ] Custom HTTP headers and methods
+- [ ] Response body validation for HTTP wait strategy
 - [ ] Custom network support
 - [ ] Volume mounting
 - [ ] Specialized modules for popular services (PostgreSQL, Redis, MongoDB)
