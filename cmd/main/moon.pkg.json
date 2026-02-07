@@ -1,0 +1,9 @@
+{
+  "is-main": true,
+  "import": [
+    {
+      "path": "username/moonbit_test_containers",
+      "alias": "lib"
+    }
+  ]
+}
