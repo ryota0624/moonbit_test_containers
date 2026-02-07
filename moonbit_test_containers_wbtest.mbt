@@ -4,10 +4,12 @@
 ///|
 /// Test basic container lifecycle with Redis
 async test "redis container lifecycle" {
-  // Create and start a Redis container
+  // Create and start a Redis container with wait strategy
   let container = ContainerImage::new("redis", "7.2.4")
     .with_exposed_port(6379)
     .with_env_var("REDIS_PORT", "6379")
+    .with_wait_for(WaitStrategy::TcpPort(6379))
+    .with_wait_timeout(30)
     .start()
 
   match container {
@@ -120,6 +122,63 @@ async test "invalid image error handling" {
     Err(e) => {
       println("Got expected error: \{e.to_string()}")
       // Test passed - we expected an error
+    }
+  }
+}
+
+///|
+/// Test TCP port wait strategy
+async test "wait strategy tcp port" {
+  // Start Redis with TCP port wait
+  let container = ContainerImage::new("redis", "7.2.4")
+    .with_exposed_port(6379)
+    .with_wait_for(WaitStrategy::TcpPort(6379))
+    .with_wait_timeout(30)
+    .start()
+
+  match container {
+    Ok(c) => {
+      println("Redis started with TCP port wait strategy")
+      println("Container ID: \{c.get_id()}")
+
+      // Verify port is accessible
+      match c.get_host_port(6379) {
+        Some(port) => {
+          println("Redis accessible on port: \{port}")
+        }
+        None => abort("Port not mapped")
+      }
+
+      // Cleanup
+      let _ = c.cleanup()
+    }
+    Err(e) => {
+      println("Failed: \{e.to_string()}")
+      abort("TCP port wait strategy failed")
+    }
+  }
+}
+
+///|
+/// Test simple delay wait strategy
+async test "wait strategy seconds" {
+  // Start Alpine with simple delay
+  let container = ContainerImage::new("alpine", "3.19")
+    .with_cmd(["sleep", "10"])
+    .with_wait_for(WaitStrategy::Seconds(2))
+    .start()
+
+  match container {
+    Ok(c) => {
+      println("Alpine started with delay wait strategy")
+      println("Container ID: \{c.get_id()}")
+
+      // Cleanup
+      let _ = c.cleanup()
+    }
+    Err(e) => {
+      println("Failed: \{e.to_string()}")
+      abort("Delay wait strategy failed")
     }
   }
 }

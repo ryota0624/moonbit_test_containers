@@ -91,6 +91,60 @@ match container {
 }
 ```
 
+### Wait Strategies
+
+Wait strategies ensure that containers are fully ready before your tests begin. This is essential for services that take time to initialize (like databases).
+
+#### TCP Port Wait
+
+Wait for a TCP port to become available:
+
+```moonbit
+let container = ContainerImage::new("redis", "7.2.4")
+  .with_exposed_port(6379)
+  .with_wait_for(WaitStrategy::TcpPort(6379))
+  .with_wait_timeout(30)  // optional, defaults to 60 seconds
+  .start()
+```
+
+#### Simple Delay
+
+Wait for a fixed number of seconds:
+
+```moonbit
+let container = ContainerImage::new("alpine", "3.19")
+  .with_cmd(["sleep", "10"])
+  .with_wait_for(WaitStrategy::Seconds(5))
+  .start()
+```
+
+#### PostgreSQL Example
+
+PostgreSQL takes several seconds to start. Use TCP port wait to ensure it's ready:
+
+```moonbit
+let container = ContainerImage::new("postgres", "16")
+  .with_exposed_port(5432)
+  .with_env_var("POSTGRES_USER", "test")
+  .with_env_var("POSTGRES_PASSWORD", "test")
+  .with_env_var("POSTGRES_DB", "test")
+  .with_wait_for(WaitStrategy::TcpPort(5432))
+  .with_wait_timeout(60)
+  .start()
+
+match container {
+  Ok(c) => {
+    // PostgreSQL is now ready to accept connections
+    match c.get_host_port(5432) {
+      Some(port) => println("PostgreSQL ready on port: \{port}")
+      None => println("Port not mapped")
+    }
+    let _ = c.cleanup()
+  }
+  Err(e) => println("Failed: \{e.to_string()}")
+}
+```
+
 ## API Reference
 
 ### `ContainerImage`
@@ -101,7 +155,16 @@ Create and configure a container image:
 - `.with_exposed_port(port: Int) -> ContainerImage`
 - `.with_env_var(key: String, value: String) -> ContainerImage`
 - `.with_cmd(cmd: Array[String]) -> ContainerImage`
+- `.with_wait_for(strategy: WaitStrategy) -> ContainerImage`
+- `.with_wait_timeout(timeout: Int) -> ContainerImage` - timeout in seconds (default: 60)
 - `.start() -> Result[Container, TestContainerError]` (async)
+
+### `WaitStrategy`
+
+Strategies for waiting until a container is ready:
+
+- `WaitStrategy::TcpPort(port: Int)` - Wait for TCP port to be open
+- `WaitStrategy::Seconds(seconds: Int)` - Wait for a fixed duration
 
 ### `Container`
 
@@ -130,14 +193,15 @@ moon test --target native
 ## Current Limitations
 
 - **Backend Support**: Only native/LLVM backend is supported (wasm-gc and js backends are not supported due to process execution requirements)
-- **Wait Strategies**: Not yet implemented - containers start immediately without waiting for readiness
+- **Wait Strategies**: TCP port and simple delay are implemented; log message and HTTP endpoint waiting are planned
 - **Network Management**: Custom networks are not supported yet
 - **Volume Management**: Volume mounting is not yet supported
 - **Platform**: Linux and macOS only (Windows support requires investigation)
 
 ## Future Enhancements
 
-- [ ] Wait strategies (log message, TCP port, HTTP endpoint)
+- [x] Wait strategies - TCP port and delay (implemented)
+- [ ] Wait strategies - log message and HTTP endpoint
 - [ ] Custom network support
 - [ ] Volume mounting
 - [ ] Specialized modules for popular services (PostgreSQL, Redis, MongoDB)
