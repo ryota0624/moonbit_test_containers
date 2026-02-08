@@ -149,7 +149,11 @@
 - 大きな変更は小さな単位に分割
 - テストを含めて実装
 - テスト実行は`moon test --native`コマンドを使用
-- 実装開始時には`orchestrator`へ委譲する
+- 実装開始時には @orchestrator へ委譲する
+  - @orchestrator は作業を分析し、適切な専門エージェントに委譲します
+  - 新機能: @orchestrator → @software-architect → @test-architect → @coder → @reviewer
+  - バグ修正: @orchestrator → @coder → @reviewer
+  - @orchestrator 自身はソースコードを修正せず、専門エージェントに作業を委譲します
 
 # MoonBit Project Agents.md Guide
 

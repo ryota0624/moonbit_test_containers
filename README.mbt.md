@@ -103,10 +103,11 @@ Wait strategies ensure that containers are fully ready before your tests begin. 
 Wait for a TCP port to become available:
 
 ```moonbit
+///|
 let container = ContainerImage::new("redis", "7.2.4")
   .with_exposed_port(6379)
   .with_wait_for(WaitStrategy::TcpPort(6379))
-  .with_wait_timeout(30)  // optional, defaults to 60 seconds
+  .with_wait_timeout(30) // optional, defaults to 60 seconds
   .start()
 ```
 
@@ -138,6 +139,7 @@ You can also wait for custom paths and status codes:
 
 ```moonbit
 // Wait for a health check endpoint to return 200
+///|
 let container = ContainerImage::new("myapp", "latest")
   .with_exposed_port(8080)
   .with_wait_for(WaitStrategy::HttpGet("/health", 200))
@@ -150,6 +152,7 @@ let container = ContainerImage::new("myapp", "latest")
 Wait for a fixed number of seconds:
 
 ```moonbit
+///|
 let container = ContainerImage::new("alpine", "3.19")
   .with_cmd(["sleep", "10"])
   .with_wait_for(WaitStrategy::Seconds(5))
