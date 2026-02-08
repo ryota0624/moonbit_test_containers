@@ -20,6 +20,14 @@ pub enum TestContainerError {
 } derive(Show, Eq)
 
 ///|
+/// Volume mount configuration
+pub struct VolumeMount {
+  host_path : String // Host filesystem path
+  container_path : String // Container filesystem path
+  read_only : Bool // Mount as read-only (default: false)
+}
+
+///|
 /// Log options for container logs
 pub struct LogOptions {
   follow : Bool // -f: follow log output (stream mode)
@@ -84,6 +92,7 @@ pub struct ContainerImage {
   cmd : Array[String]
   wait_strategy : WaitStrategy?
   wait_timeout : Int // seconds, default 60
+  volumes : Array[VolumeMount] // volume mounts
 }
 
 ///|
@@ -105,6 +114,7 @@ pub fn ContainerImage::new(name : String, tag : String) -> ContainerImage {
     cmd: [],
     wait_strategy: None,
     wait_timeout: 60,
+    volumes: [],
   }
 }
 
@@ -156,4 +166,28 @@ pub fn ContainerImage::with_wait_timeout(
   timeout : Int,
 ) -> ContainerImage {
   { ..self, wait_timeout: timeout }
+}
+
+///|
+/// Add a volume mount to the container configuration
+pub fn ContainerImage::with_volume(
+  self : ContainerImage,
+  host_path : String,
+  container_path : String,
+) -> ContainerImage {
+  let volumes = self.volumes.copy()
+  volumes.push({ host_path, container_path, read_only: false })
+  { ..self, volumes, }
+}
+
+///|
+/// Add a read-only volume mount to the container configuration
+pub fn ContainerImage::with_volume_ro(
+  self : ContainerImage,
+  host_path : String,
+  container_path : String,
+) -> ContainerImage {
+  let volumes = self.volumes.copy()
+  volumes.push({ host_path, container_path, read_only: true })
+  { ..self, volumes, }
 }

@@ -85,6 +85,7 @@ async fn wait_for_http_endpoint(
     }
 
     // Sleep between attempts
+    // Using a simple busy-wait for now - will improve with proper async sleep
     let sleep_ms = poll_interval_ms
     let _ = @process.collect_output_merged("sleep", ["0.\{sleep_ms / 1000}"])
 

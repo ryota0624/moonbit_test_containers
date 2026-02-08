@@ -7,6 +7,7 @@ A MoonBit implementation of Testcontainers, a library for creating and managing 
 - **Simple Container Management**: Start, stop, and remove Docker containers programmatically
 - **Port Mapping**: Automatically map container ports to random host ports
 - **Environment Variables**: Configure containers with custom environment variables
+- **Volume Mounting**: Mount host files and directories into containers
 - **Fluent API**: Builder pattern for intuitive container configuration
 - **Async Support**: Built on MoonBit's async primitives for efficient I/O
 - **Wait Strategies**: TCP port, HTTP endpoint, and simple delay strategies
@@ -91,6 +92,68 @@ match container {
     let _ = c.remove()
   }
   Err(e) => println("Failed to start: \{e.to_string()}")
+}
+```
+
+### Volume Mounting
+
+Mount host files and directories into containers for configuration, initialization scripts, or data sharing.
+
+#### Basic File Mount
+
+```moonbit
+///|
+let container = ContainerImage::new("nginx", "1.25-alpine")
+  .with_exposed_port(80)
+  .with_volume("./nginx.conf", "/etc/nginx/nginx.conf")
+  .start()
+```
+
+#### Read-Only Mount
+
+```moonbit
+///|
+let container = ContainerImage::new("myapp", "latest")
+  .with_volume_ro("./config", "/app/config")
+  .start()
+```
+
+#### Multiple Volumes
+
+```moonbit
+///|
+let container = ContainerImage::new("myapp", "latest")
+  .with_volume_ro("./config", "/app/config")
+  .with_volume("./data", "/app/data")
+  .with_volume("./logs", "/app/logs")
+  .start()
+```
+
+#### PostgreSQL Initialization Script
+
+Mount SQL scripts to initialize your database:
+
+```moonbit
+let container = ContainerImage::new("postgres", "16")
+  .with_exposed_port(5432)
+  .with_env_var("POSTGRES_USER", "test")
+  .with_env_var("POSTGRES_PASSWORD", "test")
+  .with_env_var("POSTGRES_DB", "testdb")
+  .with_volume("./init.sql", "/docker-entrypoint-initdb.d/init.sql")
+  .with_wait_for(WaitStrategy::TcpPort(5432))
+  .with_wait_timeout(60)
+  .start()
+
+match container {
+  Ok(c) => {
+    // PostgreSQL is now ready with your schema initialized
+    match c.get_host_port(5432) {
+      Some(port) => println("PostgreSQL ready on port: \{port}")
+      None => println("Port not mapped")
+    }
+    let _ = c.cleanup()
+  }
+  Err(e) => println("Failed: \{e.to_string()}")
 }
 ```
 
@@ -246,7 +309,7 @@ Stream with options:
 // Stream only recent logs
 let options = LogOptions::default().with_tail(50)
 
-match container.stream_logs(callback, options) {
+match container.stream_logs(callback, options=options) {
   Ok(_) => println("Streaming complete")
   Err(e) => println("Failed to stream: \{e.to_string()}")
 }
@@ -286,6 +349,8 @@ Create and configure a container image:
 - `.with_exposed_port(port: Int) -> ContainerImage`
 - `.with_env_var(key: String, value: String) -> ContainerImage`
 - `.with_cmd(cmd: Array[String]) -> ContainerImage`
+- `.with_volume(host_path: String, container_path: String) -> ContainerImage` - Mount a volume (read-write)
+- `.with_volume_ro(host_path: String, container_path: String) -> ContainerImage` - Mount a volume as read-only
 - `.with_wait_for(strategy: WaitStrategy) -> ContainerImage`
 - `.with_wait_timeout(timeout: Int) -> ContainerImage` - timeout in seconds (default: 60)
 - `.start() -> Result[Container, TestContainerError]` (async)
@@ -344,7 +409,7 @@ moon test --target native
 - **Wait Strategies**: HTTP endpoint wait uses the first exposed port; log message waiting is planned
 - **HTTP Support**: Only HTTP (not HTTPS), GET method only, status code checking only
 - **Network Management**: Custom networks are not supported yet
-- **Volume Management**: Volume mounting is not yet supported
+- **Volume Mounting**: Only bind mounts are supported; named volumes and tmpfs are not yet supported
 - **Platform**: Linux and macOS only (Windows support requires investigation)
 
 ## Future Enhancements
@@ -352,12 +417,13 @@ moon test --target native
 - [x] Wait strategies - TCP port and delay (implemented)
 - [x] Wait strategies - HTTP endpoint (implemented)
 - [x] Container logs streaming (implemented)
+- [x] Volume mounting - bind mounts (implemented)
 - [ ] Wait strategies - log message
 - [ ] HTTPS support for HTTP wait strategy
 - [ ] Custom HTTP headers and methods
 - [ ] Response body validation for HTTP wait strategy
 - [ ] Custom network support
-- [ ] Volume mounting
+- [ ] Named volumes and tmpfs support
 - [ ] Specialized modules for popular services (PostgreSQL, Redis, MongoDB)
 - [ ] Windows support
 

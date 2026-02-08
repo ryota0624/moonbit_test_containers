@@ -13,6 +13,17 @@ pub async fn ContainerImage::start(
     args.push("-P")
   }
 
+  // Add volume mounts
+  for i = 0; i < self.volumes.length(); i = i + 1 {
+    let volume = self.volumes[i]
+    args.push("-v")
+    if volume.read_only {
+      args.push("\{volume.host_path}:\{volume.container_path}:ro")
+    } else {
+      args.push("\{volume.host_path}:\{volume.container_path}")
+    }
+  }
+
   // Add environment variables
   for i = 0; i < self.env_vars.length(); i = i + 1 {
     let (key, value) = self.env_vars[i]
@@ -68,19 +79,59 @@ async fn Container::update_port_mappings(
   for i = 0; i < self.image.exposed_ports.length(); i = i + 1 {
     let container_port = self.image.exposed_ports[i]
     let args = ["port", self.id, container_port.to_string()]
-    match exec_docker(args) {
-      Ok(output) =>
-        // Parse output like "0.0.0.0:32768"
-        // Format: [host]:port or 0.0.0.0:port
-        match parse_port_mapping(output) {
-          Some(host_port) =>
-            self.port_mappings.push((container_port, host_port))
-          None =>
-            return Err(
-              PortMappingFailed("Failed to parse port mapping: \{output}"),
+
+    // Retry logic for temporary port mapping errors
+    let max_retries = 5
+    let mut attempt = 0
+    let mut last_error : TestContainerError? = None
+    let mut success = false
+    while attempt < max_retries && not(success) {
+      attempt = attempt + 1
+      match exec_docker(args) {
+        Ok(output) =>
+          // Parse output like "0.0.0.0:32768"
+          // Format: [host]:port or 0.0.0.0:port
+          match parse_port_mapping(output) {
+            Some(host_port) => {
+              self.port_mappings.push((container_port, host_port))
+              success = true
+            }
+            None =>
+              last_error = Some(
+                PortMappingFailed("Failed to parse port mapping: \{output}"),
+              )
+          }
+        Err(e) => {
+          // Check if this is a temporary error (404 or not found)
+          let error_msg = e.to_string()
+          let is_temporary = error_msg.contains("404") ||
+            error_msg.contains("not found")
+          if is_temporary && attempt < max_retries {
+            // Retry after 1 second
+            println(
+              "Warning: Port mapping failed (attempt \{attempt}/\{max_retries}): \{error_msg}",
             )
+            @async.sleep(1000000000) // 1 second in nanoseconds
+            last_error = Some(e)
+          } else {
+            // Permanent error or max retries reached
+            return Err(e)
+          }
         }
-      Err(e) => return Err(e)
+      }
+    }
+
+    // If we exhausted retries without success, return the last error
+    if not(success) {
+      match last_error {
+        Some(e) => return Err(e)
+        None =>
+          return Err(
+            PortMappingFailed(
+              "Failed to get port mapping after \{max_retries} retries",
+            ),
+          )
+      }
     }
   }
   Ok(())
