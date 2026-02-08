@@ -28,6 +28,53 @@ pub fn TestContainerError::to_string(self : TestContainerError) -> String {
   }
 }
 
+///|
+/// Log options for container logs
+pub struct LogOptions {
+  follow : Bool           // -f: follow log output (stream mode)
+  timestamps : Bool       // -t: show timestamps
+  tail : Option[Int]      // --tail N: show last N lines
+  since : Option[String]  // --since: show logs since timestamp
+  until : Option[String]  // --until: show logs until timestamp
+}
+
+/// Create default LogOptions
+pub fn LogOptions::default() -> LogOptions {
+  {
+    follow: false,
+    timestamps: false,
+    tail: None,
+    since: None,
+    until: None,
+  }
+}
+
+/// Set follow option
+pub fn LogOptions::with_follow(self : LogOptions, follow : Bool) -> LogOptions {
+  { ..self, follow }
+}
+
+/// Set timestamps option
+pub fn LogOptions::with_timestamps(self : LogOptions, timestamps : Bool) -> LogOptions {
+  { ..self, timestamps }
+}
+
+/// Set tail option
+pub fn LogOptions::with_tail(self : LogOptions, lines : Int) -> LogOptions {
+  { ..self, tail: Some(lines) }
+}
+
+/// Set since option
+pub fn LogOptions::with_since(self : LogOptions, timestamp : String) -> LogOptions {
+  { ..self, since: Some(timestamp) }
+}
+
+/// Set until option
+pub fn LogOptions::with_until(self : LogOptions, timestamp : String) -> LogOptions {
+  { ..self, until: Some(timestamp) }
+}
+
+///|
 /// Container image configuration
 pub struct ContainerImage {
   name : String
@@ -98,6 +145,7 @@ pub fn ContainerImage::with_wait_timeout(
   { ..self, wait_timeout: timeout }
 }
 
+///|
 /// Execute a Docker CLI command and return the output
 async fn exec_docker(args : Array[String]) -> Result[String, TestContainerError] {
   let command = "docker"
@@ -266,6 +314,136 @@ async fn wait_for_container(
   }
 }
 
+///|
+/// Build docker logs command arguments from LogOptions
+fn build_logs_args(container_id : String, options : LogOptions) -> Array[String] {
+  let args : Array[String] = ["logs"]
+
+  // Add follow option
+  if options.follow {
+    args.push("-f")
+  }
+
+  // Add timestamps option
+  if options.timestamps {
+    args.push("-t")
+  }
+
+  // Add tail option
+  match options.tail {
+    Some(n) => {
+      args.push("--tail")
+      args.push(n.to_string())
+    }
+    None => ()
+  }
+
+  // Add since option
+  match options.since {
+    Some(timestamp) => {
+      args.push("--since")
+      args.push(timestamp)
+    }
+    None => ()
+  }
+
+  // Add until option
+  match options.until {
+    Some(timestamp) => {
+      args.push("--until")
+      args.push(timestamp)
+    }
+    None => ()
+  }
+
+  // Add container ID
+  args.push(container_id)
+
+  args
+}
+
+/// Get all logs from the container
+pub async fn Container::get_logs(
+  self : Container
+) -> Result[String, TestContainerError] {
+  let args = ["logs", self.id]
+  exec_docker(args)
+}
+
+/// Get logs with specified options
+pub async fn Container::get_logs_with_options(
+  self : Container,
+  options : LogOptions
+) -> Result[String, TestContainerError] {
+  // Check if follow option is set
+  if options.follow {
+    return Err(InvalidConfiguration(
+      "Cannot use follow option with get_logs_with_options. Use stream_logs instead."
+    ))
+  }
+
+  let args = build_logs_args(self.id, options)
+  exec_docker(args)
+}
+
+/// Read logs line by line from a process output
+async fn read_logs_line_by_line(
+  reader : @process.ReadFromProcess,
+  callback : (String) -> Unit
+) -> Result[Unit, TestContainerError] {
+  try {
+    loop {
+      match reader.read_line() {
+        Ok(line) => {
+          // Convert StringView to String
+          let line_str = "\{line}"
+          callback(line_str)
+        }
+        Err(@io.EOF) => break
+        Err(e) => return Err(DockerCommandFailed("Failed to read log line: \{e}"))
+      }
+    }
+    Ok(())
+  } catch {
+    e => Err(DockerCommandFailed("Log streaming error: \{e.to_string()}"))
+  }
+}
+
+/// Stream logs line by line with a callback
+pub async fn Container::stream_logs(
+  self : Container,
+  callback : (String) -> Unit,
+  options : LogOptions = LogOptions::default()
+) -> Result[Unit, TestContainerError] {
+  // Build arguments with follow enabled
+  let stream_options = { ..options, follow: true }
+  let args = build_logs_args(self.id, stream_options)
+
+  try {
+    // Create a pipe for reading process output
+    let (reader, writer) = @process.read_from_process()
+
+    // Start docker logs process with stdout redirected to pipe
+    let exit_code = @process.run("docker", args, stdout=writer)
+
+    // Read logs line by line
+    match read_logs_line_by_line(reader, callback) {
+      Ok(_) => {
+        // Check exit code
+        if exit_code == 0 {
+          Ok(())
+        } else {
+          Err(DockerCommandFailed("Docker logs exited with code \{exit_code}"))
+        }
+      }
+      Err(e) => Err(e)
+    }
+  } catch {
+    e => Err(DockerCommandFailed("Failed to stream logs: \{e.to_string()}"))
+  }
+}
+
+///|
 /// Start a container based on the image configuration
 pub async fn ContainerImage::start(self : ContainerImage) -> Result[Container, TestContainerError] {
   // Build docker run command arguments
@@ -409,6 +587,7 @@ pub fn Container::get_id(self : Container) -> String {
   self.id
 }
 
+///|
 /// Stop the container
 pub async fn Container::stop(self : Container) -> Result[Unit, TestContainerError] {
   let args = ["stop", self.id]

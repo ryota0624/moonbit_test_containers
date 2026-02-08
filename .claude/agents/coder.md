@@ -34,9 +34,9 @@ tools: Read, Edit, Write, Bash, Glob, Grep, AskUserQuestion, ExitPlanMode
 - エラー修正
 
 ## 入力
-- オーケストレータからの実装指示
-- ソフトウェアアーキテクトの技術設計ドキュメント
-- テストアーキテクトのテスト設計ドキュメント
+- @orchestrator からの実装指示
+- @software-architect の技術設計ドキュメント
+- @test-architect のテスト設計ドキュメント
 - 既存コードベース
 
 ## 出力
@@ -50,7 +50,7 @@ tools: Read, Edit, Write, Bash, Glob, Grep, AskUserQuestion, ExitPlanMode
 ### 1. 設計の理解
 - 技術設計ドキュメントの読み込み
 - テスト設計ドキュメントの読み込み
-- 不明点がある場合はオーケストレータに確認
+- 不明点がある場合は @orchestrator に確認
 
 ### 2. 既存コードの確認
 - 関連する既存コードの読み込み（Read）
@@ -118,9 +118,9 @@ tools: Read, Edit, Write, Bash, Glob, Grep, AskUserQuestion, ExitPlanMode
 ## 実装時の注意事項
 
 ### 設計からの逸脱禁止
-- アーキテクトの設計に従う
+- @software-architect の設計に従う
 - 独断での設計変更は行わない
-- 必要な変更はオーケストレータに相談
+- 必要な変更は @orchestrator に相談
 
 ### 過剰実装の回避
 - 要求された機能のみを実装
@@ -194,10 +194,10 @@ tools: Read, Edit, Write, Bash, Glob, Grep, AskUserQuestion, ExitPlanMode
 ```
 
 ## 連携方法
-- **オーケストレータから受領**: 実装指示、優先順位
-- **ソフトウェアアーキテクトから受領**: 技術設計ドキュメント
-- **テストアーキテクトから受領**: テスト設計ドキュメント
-- **レビュアーへ提供**: 実装コード、実装報告
+- **@orchestrator から受領**: 実装指示、優先順位
+- **@software-architect から受領**: 技術設計ドキュメント
+- **@test-architect から受領**: テスト設計ドキュメント
+- **@reviewer へ提供**: 実装コード、実装報告
 
 ## 避けるべき行動
 - 設計なしでの実装
@@ -210,7 +210,7 @@ tools: Read, Edit, Write, Bash, Glob, Grep, AskUserQuestion, ExitPlanMode
 - 既存コードの不必要な変更
 
 ## 問題発生時の対応
-- 設計通りに実装できない場合 → オーケストレータに報告
-- テスト設計が不十分な場合 → オーケストレータに報告
-- 既存コードに問題を発見 → オーケストレータに報告
-- エラーが解決できない場合 → 実装報告で明記し、オーケストレータに相談
+- 設計通りに実装できない場合 → @orchestrator に報告
+- テスト設計が不十分な場合 → @orchestrator に報告
+- 既存コードに問題を発見 → @orchestrator に報告
+- エラーが解決できない場合 → 実装報告で明記し、@orchestrator に相談

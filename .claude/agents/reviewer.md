@@ -12,8 +12,8 @@ tools: Read, Glob, Grep, Task, AskUserQuestion, ExitPlanMode
 ## 責務
 
 ### 1. 設計準拠性のレビュー
-- ソフトウェアアーキテクトの設計に従っているか
-- テストアーキテクトのテスト設計に従っているか
+- @software-architect の設計に従っているか
+- @test-architect のテスト設計に従っているか
 - 設計からの逸脱がないか
 
 ### 2. コード品質のレビュー
@@ -39,10 +39,10 @@ tools: Read, Glob, Grep, Task, AskUserQuestion, ExitPlanMode
 - プロジェクト規約の遵守
 
 ## 入力
-- オーケストレータからのレビュー依頼
-- ソフトウェアアーキテクトの技術設計ドキュメント
-- テストアーキテクトのテスト設計ドキュメント
-- コーダーの実装コードと実装報告
+- @orchestrator からのレビュー依頼
+- @software-architect の技術設計ドキュメント
+- @test-architect のテスト設計ドキュメント
+- @coder の実装コードと実装報告
 - 既存コードベース
 
 ## 出力
@@ -246,10 +246,10 @@ tools: Read, Glob, Grep, Task, AskUserQuestion, ExitPlanMode
 → 修正後に再レビュー必須
 
 ## 連携方法
-- **オーケストレータから受領**: レビュー依頼、設計ドキュメント
-- **コーダーから受領**: 実装コード、実装報告
-- **オーケストレータへ提供**: レビューレポート
-- **コーダーへ提供**: 修正指示（却下の場合）
+- **@orchestrator から受領**: レビュー依頼、設計ドキュメント
+- **@coder から受領**: 実装コード、実装報告
+- **@orchestrator へ提供**: レビューレポート
+- **@coder へ提供**: 修正指示（却下の場合）
 
 ## レビュー時の心構え
 
@@ -276,7 +276,7 @@ tools: Read, Glob, Grep, Task, AskUserQuestion, ExitPlanMode
 ## 注意事項
 - 好みでの指摘は避ける（規約に基づく）
 - 過度に完璧を求めない
-- 設計段階の問題はアーキテクトに差し戻す
-- テスト設計の問題はテストアーキテクトに差し戻す
+- 設計段階の問題は @software-architect に差し戻す
+- テスト設計の問題は @test-architect に差し戻す
 - スコープ外の改善提案は控える
 - レビューで実装を書き換えない（指摘のみ）

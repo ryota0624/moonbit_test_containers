@@ -10,6 +10,7 @@ A MoonBit implementation of Testcontainers, a library for creating and managing 
 - **Fluent API**: Builder pattern for intuitive container configuration
 - **Async Support**: Built on MoonBit's async primitives for efficient I/O
 - **Wait Strategies**: TCP port, HTTP endpoint, and simple delay strategies
+- **Container Logs**: Retrieve and stream container logs in real-time
 
 ## Requirements
 
@@ -182,6 +183,95 @@ match container {
 }
 ```
 
+### Container Logs
+
+Retrieve and stream container logs for debugging and monitoring.
+
+#### Basic Log Retrieval
+
+Get all logs from a container:
+
+```moonbit
+match container.get_logs() {
+  Ok(logs) => println("Container logs:\n\{logs}")
+  Err(e) => println("Failed to get logs: \{e.to_string()}")
+}
+```
+
+#### Log Options
+
+Customize log retrieval with options:
+
+```moonbit
+// Get last 100 lines with timestamps
+let options = LogOptions::default()
+  .with_tail(100)
+  .with_timestamps(true)
+
+match container.get_logs_with_options(options) {
+  Ok(logs) => println("Recent logs:\n\{logs}")
+  Err(e) => println("Failed to get logs: \{e.to_string()}")
+}
+```
+
+Available options:
+- `.with_tail(lines: Int)`: Get only the last N lines
+- `.with_timestamps(enabled: Bool)`: Include timestamps
+- `.with_since(timestamp: String)`: Get logs since a specific time
+- `.with_until(timestamp: String)`: Get logs until a specific time
+
+#### Log Streaming
+
+Stream logs in real-time with a callback:
+
+```moonbit
+// Stream logs line by line
+let callback = fn(line: String) {
+  println("Log: \{line}")
+}
+
+match container.stream_logs(callback) {
+  Ok(_) => println("Streaming complete")
+  Err(e) => println("Failed to stream: \{e.to_string()}")
+}
+```
+
+Stream with options:
+
+```moonbit
+// Stream only recent logs
+let options = LogOptions::default().with_tail(50)
+
+match container.stream_logs(callback, options) {
+  Ok(_) => println("Streaming complete")
+  Err(e) => println("Failed to stream: \{e.to_string()}")
+}
+```
+
+#### Debugging Failed Containers
+
+```moonbit
+let container = ContainerImage::new("myapp", "latest")
+  .with_exposed_port(8080)
+  .start()
+
+match container {
+  Ok(c) => {
+    // If something goes wrong, check the logs
+    match c.get_logs() {
+      Ok(logs) => {
+        if logs.contains("ERROR") {
+          println("Container error detected:\n\{logs}")
+        }
+      }
+      Err(e) => println("Failed to get logs: \{e.to_string()}")
+    }
+    let _ = c.cleanup()
+  }
+  Err(e) => println("Failed to start: \{e.to_string()}")
+}
+```
+
 ## API Reference
 
 ### `ContainerImage`
@@ -213,6 +303,22 @@ Manage running containers:
 - `.stop() -> Result[Unit, TestContainerError]` (async)
 - `.remove() -> Result[Unit, TestContainerError]` (async)
 - `.cleanup() -> Result[Unit, TestContainerError]` (async) - stops and removes the container
+- `.get_logs() -> Result[String, TestContainerError]` (async)
+- `.get_logs_with_options(options: LogOptions) -> Result[String, TestContainerError]` (async)
+- `.stream_logs(callback: (String) -> Unit, options?: LogOptions) -> Result[Unit, TestContainerError]` (async)
+
+### `LogOptions`
+
+Configure log retrieval:
+
+- `LogOptions::default() -> LogOptions`
+- `.with_tail(lines: Int) -> LogOptions` - Get last N lines
+- `.with_timestamps(enabled: Bool) -> LogOptions` - Include timestamps
+- `.with_since(timestamp: String) -> LogOptions` - Get logs since timestamp
+- `.with_until(timestamp: String) -> LogOptions` - Get logs until timestamp
+- `.with_follow(enabled: Bool) -> LogOptions` - Follow log output (only for `stream_logs`)
+
+Note: The `.with_follow()` option cannot be used with `get_logs_with_options()`. Use `stream_logs()` for following logs.
 
 ## Building and Testing
 
@@ -241,6 +347,7 @@ moon test --target native
 
 - [x] Wait strategies - TCP port and delay (implemented)
 - [x] Wait strategies - HTTP endpoint (implemented)
+- [x] Container logs streaming (implemented)
 - [ ] Wait strategies - log message
 - [ ] HTTPS support for HTTP wait strategy
 - [ ] Custom HTTP headers and methods
@@ -248,7 +355,6 @@ moon test --target native
 - [ ] Custom network support
 - [ ] Volume mounting
 - [ ] Specialized modules for popular services (PostgreSQL, Redis, MongoDB)
-- [ ] Container logs streaming
 - [ ] Windows support
 
 ## License

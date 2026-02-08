@@ -149,7 +149,7 @@
 - 大きな変更は小さな単位に分割
 - テストを含めて実装
 - テスト実行は`moon test --native`コマンドを使用
-- 実装開始時には`orchestartor`へ委譲する
+- 実装開始時には`orchestrator`へ委譲する
 
 # MoonBit Project Agents.md Guide
 
