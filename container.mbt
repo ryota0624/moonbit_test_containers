@@ -117,7 +117,11 @@ async fn Container::update_port_mappings(
               "Warning: Port mapping failed (attempt \{attempt}/\{max_retries}): \{error_msg}",
             )
             @async.sleep(1000) catch { // 1 second
-              _ => ()
+              _ => {
+                return Err(
+                  DockerCommandFailed("Sleep failed during port mapping retry"),
+                )
+              }
             } // 1 second in nanoseconds
             last_error = Some(e)
           } else {
