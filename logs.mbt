@@ -1,4 +1,8 @@
 // Container logs management
+//
+// NOTE (2026-02-08): Error handling in this file has been simplified to work around
+// a MoonBit compiler C code generation issue when combining async functions with
+// complex catch blocks and closures. This affects native backend only.
 
 ///|
 /// Build docker logs command arguments from LogOptions
@@ -54,7 +58,7 @@ fn build_logs_args(
 /// Get all logs from the container
 pub async fn Container::get_logs(
   self : Container,
-) -> Result[String, TestContainerError] noraise{
+) -> Result[String, TestContainerError] noraise {
   let args = ["logs", self.id]
   exec_docker(args)
 }
@@ -96,31 +100,28 @@ pub async fn Container::stream_logs(
   // True streaming would require more complex implementation
   let stream_options = { ..options, follow: false }
   let args = build_logs_args(self.id, stream_options)
-  try {
-    // Run docker logs and collect output
-    let (status, output) = @process.collect_output_merged("docker", args)
-    if status != 0 {
-      let error_text = output.text()
-      return Err(
-        DockerCommandFailed(
-          "Docker logs exited with code \{status}: \{error_text}",
-        ),
-      )
-    }
 
-    // Process output line by line
-    let text = output.text()
-    let lines = text.split("\n").to_array()
-    for i = 0; i < lines.length(); i = i + 1 {
-      let line = lines[i]
-      // Convert StringView to String and call callback
-      let line_str = "\{line}"
-      if line_str.length() > 0 {
-        callback(line_str)
-      }
-    }
-    Ok(())
-  } catch {
-    e => Err(DockerCommandFailed("Failed to stream logs: \{e.to_string()}"))
+  // Run docker logs using exec_docker (works on both native and JS backends)
+  // NOTE: Simplified to avoid C code generation issue with nested match/catch
+  let output_result = exec_docker(args) catch {
+    e => return Err(DockerCommandFailed("Failed to stream logs: \{e.to_string()}"))
   }
+
+  // Early return on error
+  let output_text = match output_result {
+    Err(e) => return Err(e)
+    Ok(text) => text
+  }
+
+  // Process output line by line
+  let lines = output_text.split("\n").to_array()
+  for i = 0; i < lines.length(); i = i + 1 {
+    let line = lines[i]
+    // Convert StringView to String and call callback
+    let line_str = "\{line}"
+    if line_str.length() > 0 {
+      callback(line_str)
+    }
+  }
+  Ok(())
 }

@@ -1,31 +1,12 @@
-// Docker CLI execution utilities
-
-///|
-/// Execute a Docker CLI command and return the output
-async fn exec_docker(
-  args : Array[String],
-) -> Result[String, TestContainerError] noraise {
-  let command = "docker"
-  try {
-    let (status, output) = @process.collect_output_merged(command, args)
-    let output_view = output.text()
-    // Convert StringView to String and trim
-    let trimmed = output_view.trim()
-    let output_str = "\{trimmed}"
-    if status == 0 {
-      Ok(output_str)
-    } else {
-      Err(DockerCommandFailed(output_str))
-    }
-  } catch {
-    e => Err(DockerCommandFailed(e.to_string()))
-  }
-}
+// Docker command executor - common utilities
+// Backend-specific implementations:
+// - Native backend: docker_native.mbt
+// - JavaScript backend: docker_js.mbt
 
 ///|
 /// Parse port mapping output from docker port command
 /// Expected format: "0.0.0.0:32768" or "[::]:32768"
-fn parse_port_mapping(output : String) -> Int? {
+pub fn parse_port_mapping(output : String) -> Int? {
   // Find the last colon and extract the port number after it
   let chars = output.to_array()
   let mut last_colon_idx = -1
@@ -46,7 +27,6 @@ fn parse_port_mapping(output : String) -> Int? {
   }
   let port_str = String::from_array(port_chars)
   Some(
-
     // Parse to integer
     @strconv.parse_int(port_str),
   ) catch {

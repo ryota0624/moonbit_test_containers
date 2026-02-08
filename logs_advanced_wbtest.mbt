@@ -22,7 +22,9 @@ async test "get_logs_with_options - tail" {
           println("Logs with tail option: \{logs}")
           // Should contain Line 16-20, but not Line 1-15
           // Check for "Line 1\n" to avoid matching "Line 10", "Line 16", etc.
-          if logs.contains("Line 1\n") || logs.contains("Line 2\n") || logs.contains("Line 15\n") {
+          if logs.contains("Line 1\n") ||
+            logs.contains("Line 2\n") ||
+            logs.contains("Line 15\n") {
             abort("Logs should not contain early lines with tail=5")
           }
           if !logs.contains("Line 20") {

@@ -1,5 +1,6 @@
 // Integration tests for basic log retrieval
 // Note: These tests require Docker to be installed and running
+
 ///|
 /// Phase 1: Test basic log retrieval
 async test "logsbasic" {

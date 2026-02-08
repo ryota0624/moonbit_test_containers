@@ -1,42 +1,14 @@
 // Wait strategies for container readiness
-
-///|
-/// Check if a TCP port is open using netcat
-async fn check_tcp_port(host : String, port : Int) -> Bool {
-  // Use nc (netcat) to check if port is open
-  // nc -z returns 0 if connection succeeds
-  let command = "nc"
-  let args = ["-z", "-w", "1", host, port.to_string()]
-  try {
-    let (status, _) = @process.collect_output_merged(command, args)
-    status == 0
-  } catch {
-    _ => false
-  }
-}
-
-///|
-/// Check if an HTTP endpoint returns the expected status code
-async fn check_http_endpoint(
-  host : String,
-  port : Int,
-  path : String,
-  expected_status : Int,
-) -> Bool {
-  // Construct URL
-  let url = "http://\{host}:\{port}\{path}"
-  try {
-    // Send GET request and get response
-    let (response, body) = @http.get_stream(url)
-    defer body.close()
-
-    // Check if status code matches
-    response.code == expected_status
-  } catch {
-    // Any error (connection refused, timeout, etc.) means not ready
-    _ => false
-  }
-}
+// Common functions used by both native and JavaScript backends
+//
+// Backend-specific implementations:
+// - check_tcp_port: See wait_strategy_native.mbt and wait_strategy_js.mbt
+// - check_http_endpoint: See wait_strategy_native.mbt and wait_strategy_js.mbt
+//
+// NOTE (2026-02-08): Error handling in this file has been simplified to work around
+// a MoonBit compiler C code generation issue. Complex catch blocks with closures
+// can cause "too many arguments to function" errors in generated C code.
+// This affects native backend only; JavaScript backend works correctly.
 
 ///|
 /// Wait for TCP port to be open with timeout
@@ -44,28 +16,22 @@ async fn wait_for_tcp_port(
   host : String,
   port : Int,
   timeout_seconds : Int,
-) -> Result[Unit, TestContainerError] noraise{
+) -> Result[Unit, TestContainerError] noraise {
   // Poll every 500ms
+  // NOTE: Simplified error handling to work around C code generation issue
   let poll_interval_ms = 500
   let max_attempts = timeout_seconds * 1000 / poll_interval_ms
   for attempt = 0; attempt < max_attempts; attempt = attempt + 1 {
-    let port_check = check_tcp_port(host, port) catch {
-      _ => false
-    } 
-    if port_check {
+    // Check port - ignore errors and treat as not ready
+    let port_ready = check_tcp_port(host, port) catch { _ => false }
+    if port_ready {
       return Ok(())
     }
 
-    // Sleep between attempts using async sleep (milliseconds)
+    // Sleep between attempts - ignore sleep errors
     @async.sleep(poll_interval_ms) catch {
-      _ => {
-        // Ignore sleep errors
-        return Err(
-          DockerCommandFailed("Sleep failed during wait"),
-        )
-      }
+      _ => ()
     }
-
   } else {
     Err(
       WaitStrategyTimeout(
@@ -85,26 +51,22 @@ async fn wait_for_http_endpoint(
   timeout_seconds : Int,
 ) -> Result[Unit, TestContainerError] noraise {
   // Poll every 500ms
+  // NOTE: Simplified error handling to work around C code generation issue
   let poll_interval_ms = 500
   let max_attempts = timeout_seconds * 1000 / poll_interval_ms
   for attempt = 0; attempt < max_attempts; attempt = attempt + 1 {
-    let ready = check_http_endpoint(host, port, path, expected_status) catch {
+    // Check endpoint - ignore errors and treat as not ready
+    let endpoint_ready = check_http_endpoint(host, port, path, expected_status) catch {
       _ => false
     }
-    if ready {
+    if endpoint_ready {
       return Ok(())
     }
 
-    // Sleep between attempts using async sleep (milliseconds)
+    // Sleep between attempts - ignore sleep errors
     @async.sleep(poll_interval_ms) catch {
-      _ => {
-        // Ignore sleep errors
-        return Err(
-          DockerCommandFailed("Sleep failed during wait"),
-        )
-      }
+      _ => ()
     }
-
   } else {
     Err(
       WaitStrategyTimeout(
@@ -122,15 +84,14 @@ async fn wait_for_container(
   timeout : Int,
 ) -> Result[Unit, TestContainerError] noraise {
   match strategy {
-    Seconds(seconds) =>
+    Seconds(seconds) => {
       // Simple delay using async sleep (milliseconds)
-      try {
-        let sleep_ms = seconds * 1000 // Convert seconds to milliseconds
-        @async.sleep(sleep_ms)
-        Ok(())
-      } catch {
-        e => Err(DockerCommandFailed("Sleep failed: \{e.to_string()}"))
+      let sleep_ms = seconds * 1000 // Convert seconds to milliseconds
+      @async.sleep(sleep_ms) catch {
+        e => return Err(DockerCommandFailed("Sleep failed: \{e.to_string()}"))
       }
+      Ok(())
+    }
     TcpPort(container_port) =>
       // Get the mapped host port
       match container.get_host_port(container_port) {

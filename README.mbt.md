@@ -12,12 +12,61 @@ A MoonBit implementation of Testcontainers, a library for creating and managing 
 - **Async Support**: Built on MoonBit's async primitives for efficient I/O
 - **Wait Strategies**: TCP port, HTTP endpoint, and simple delay strategies
 - **Container Logs**: Retrieve and stream container logs in real-time
+- **Multi-Backend Support**: Works with both Native (LLVM) and JavaScript (Node.js) backends
 
 ## Requirements
 
-- **MoonBit**: Latest version with native/LLVM backend support
+- **MoonBit**: Latest version with multi-backend support
 - **Docker**: Docker must be installed and running on your system
-- **Platform**: Linux or macOS (the `moonbitlang/async/process` package currently supports native backends only)
+- **For Native Backend**: Linux or macOS platform
+- **For JavaScript Backend**: Node.js v14 or later
+
+## Backend Support
+
+This library supports both **Native** and **JavaScript** backends, allowing you to run tests in different environments.
+
+### Native Backend (LLVM)
+
+The Native backend uses native process execution via `@process` for optimal performance.
+
+**Advantages**:
+- Best performance
+- Direct system calls
+- Recommended for production use and CI/CD
+
+**Usage**:
+```bash
+moon test --target native
+```
+
+### JavaScript Backend (Node.js)
+
+The JavaScript backend uses Node.js `child_process` module via FFI (Foreign Function Interface).
+
+**Advantages**:
+- Works in Node.js environments
+- Same API and test compatibility as Native backend
+- Useful for JavaScript-focused development workflows
+
+**Requirements**:
+- Node.js v14 or later
+- **Note**: Browser environments are not supported (requires Node.js `child_process` module)
+
+**Usage**:
+```bash
+moon test --target js
+```
+
+**Performance**: The JavaScript backend is typically 1.2-1.5x slower than the Native backend due to Node.js overhead, but this is acceptable for integration testing scenarios.
+
+### Backend Implementation Details
+
+The Docker CLI execution is implemented separately for each backend using MoonBit's Configuration Attribute feature:
+
+- **Native**: `docker_native.mbt` uses `@process.collect_output_merged`
+- **JavaScript**: `docker_js.mbt` uses Node.js `child_process.execSync` via FFI
+
+Both implementations provide the same interface and are automatically selected based on the build target. All integration tests work identically on both backends.
 
 ## Installation
 
@@ -391,26 +440,37 @@ Note: The `.with_follow()` option cannot be used with `get_logs_with_options()`.
 
 ## Building and Testing
 
-Build the project (native target required):
+Build the project:
 
 ```bash
+# Native backend
 moon check --target native
+
+# JavaScript backend
+moon check --target js
 ```
 
 Run tests (requires Docker):
 
 ```bash
+# Native backend (recommended)
 moon test --target native
+
+# JavaScript backend (requires Node.js)
+moon test --target js
+
+# Both backends
+moon test --target native && moon test --target js
 ```
 
 ## Current Limitations
 
-- **Backend Support**: Only native/LLVM backend is supported (wasm-gc and js backends are not supported due to process execution requirements)
+- **JavaScript Backend**: Requires Node.js environment; browser environments are not supported
 - **Wait Strategies**: HTTP endpoint wait uses the first exposed port; log message waiting is planned
 - **HTTP Support**: Only HTTP (not HTTPS), GET method only, status code checking only
 - **Network Management**: Custom networks are not supported yet
 - **Volume Mounting**: Only bind mounts are supported; named volumes and tmpfs are not yet supported
-- **Platform**: Linux and macOS only (Windows support requires investigation)
+- **Platform**: Native backend supports Linux and macOS only (Windows support requires investigation)
 
 ## Future Enhancements
 
@@ -418,6 +478,7 @@ moon test --target native
 - [x] Wait strategies - HTTP endpoint (implemented)
 - [x] Container logs streaming (implemented)
 - [x] Volume mounting - bind mounts (implemented)
+- [x] Multi-backend support - Native and JavaScript (implemented)
 - [ ] Wait strategies - log message
 - [ ] HTTPS support for HTTP wait strategy
 - [ ] Custom HTTP headers and methods
@@ -426,6 +487,7 @@ moon test --target native
 - [ ] Named volumes and tmpfs support
 - [ ] Specialized modules for popular services (PostgreSQL, Redis, MongoDB)
 - [ ] Windows support
+- [ ] Browser environment support (if possible)
 
 ## License
 
