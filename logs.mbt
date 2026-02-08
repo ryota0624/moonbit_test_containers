@@ -103,9 +103,7 @@ pub async fn Container::stream_logs(
 
   // Run docker logs using exec_docker (works on both native and JS backends)
   // NOTE: Simplified to avoid C code generation issue with nested match/catch
-  let output_result = exec_docker(args) catch {
-    e => return Err(DockerCommandFailed("Failed to stream logs: \{e.to_string()}"))
-  }
+  let output_result = exec_docker(args)
 
   // Early return on error
   let output_text = match output_result {

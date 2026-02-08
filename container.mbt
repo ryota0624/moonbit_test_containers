@@ -38,39 +38,46 @@ pub async fn ContainerImage::start(
   for i = 0; i < self.cmd.length(); i = i + 1 {
     args.push(self.cmd[i])
   }
-
-  // Execute docker run
-  match exec_docker(args) {
-    Ok(container_id) => {
-      let container = { id: container_id, image: self, port_mappings: [] }
-      // Get port mappings if ports were exposed
-      match container.update_port_mappings() {
-        Ok(_) =>
-          // Execute wait strategy if specified
-          match self.wait_strategy {
-            Some(strategy) =>
-              match wait_for_container(container, strategy, self.wait_timeout) {
-                Ok(_) => Ok(container)
-                Err(e) => {
-                  // Cleanup container on wait failure
-                  let _ = container.cleanup() catch {
-                    _ => {
-                      println(
-                        "Failed to cleanup container \{container.get_id()} after wait failure",
-                      )
-                      return Err(e)
-                    }
-                  }
-                  Err(e)
-                }
-              }
-            None => Ok(container)
-          }
-        Err(e) => Err(e)
-      }
-    }
-    Err(e) => Err(e)
+  let exec_result : Result[String, _] = exec_docker(args)
+  guard exec_result is Ok(container_id) else {
+    return Err(
+      DockerCommandFailed("Failed to start container for image \{self.name}"),
+    )
   }
+  let container = { id: container_id, image: self, port_mappings: [] }
+  guard container.update_port_mappings() is Ok(_) else {
+    return Err(
+      DockerCommandFailed(
+        "Failed to get port mappings for container \{container_id}",
+      ),
+    )
+  }
+
+  guard self.wait_strategy is Some(strategy) else {
+    return Ok(container)
+  }
+
+  guard wait_for_container(container, strategy, self.wait_timeout) is Ok(_) else {
+    defer fn() -> Unit noraise {
+      run_async(async fn() -> Unit noraise {
+        let _ = container.cleanup() catch {
+          _ => {
+            println(
+              "Failed to cleanup container \{container.get_id()} after wait failure",
+            )
+            Ok(())
+          }
+        }
+      })
+    }()
+
+    return Err(
+      DockerCommandFailed(
+        "Container \{container_id} failed to become ready",
+      ),
+    )
+  }
+  Ok(container)
 }
 
 ///|
@@ -173,8 +180,7 @@ pub async fn Container::stop(
   self : Container,
 ) -> Result[Unit, TestContainerError] {
   let args = ["stop", self.id]
-  exec_docker(args).map(() => ())
-
+  exec_docker(args).map(_ => ())
 }
 
 ///|
@@ -183,10 +189,7 @@ pub async fn Container::remove(
   self : Container,
 ) -> Result[Unit, TestContainerError] {
   let args = ["rm", self.id]
-  match exec_docker(args) {
-    Ok(_) => Ok(())
-    Err(e) => Err(e)
-  }
+  exec_docker(args).map(_ => ())
 }
 
 ///|
@@ -199,3 +202,6 @@ pub async fn Container::cleanup(
   let _ = self.stop()
   self.remove()
 }
+
+///| `run_async` spawn a new coroutine and execute an async function in it
+fn run_async(f : async () -> Unit noraise) -> Unit = "%async.run"
