@@ -15,7 +15,7 @@ async test "stream_logs - basic" {
       println("Container started for streaming: \{c.get_id()}")
 
       // Wait for container to start
-      @async.sleep(500000000) // 0.5 seconds
+      @async.sleep(500) // 0.5 seconds
 
       // Collect streamed lines
       let lines : Array[String] = []
@@ -69,7 +69,7 @@ async test "stream_logs - callback count" {
       println("Container started for counting: \{c.get_id()}")
 
       // Wait for container to start
-      @async.sleep(500000000)
+      @async.sleep(500) // 0.5 seconds
 
       // Count the callbacks
       let count = { val: 0 }

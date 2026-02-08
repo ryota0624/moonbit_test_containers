@@ -116,7 +116,7 @@ async fn Container::update_port_mappings(
             println(
               "Warning: Port mapping failed (attempt \{attempt}/\{max_retries}): \{error_msg}",
             )
-            @async.sleep(1000000000) catch {
+            @async.sleep(1000) catch { // 1 second
               _ => ()
             } // 1 second in nanoseconds
             last_error = Some(e)

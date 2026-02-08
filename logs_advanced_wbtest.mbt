@@ -13,7 +13,7 @@ async test "get_logs_with_options - tail" {
       println("Container started: \{c.get_id()}")
 
       // Wait for the command to complete
-      @async.sleep(1000000000)
+      @async.sleep(1000) // 1 second
 
       // Get last 5 lines only
       let options = LogOptions::default().with_tail(5)
@@ -57,7 +57,7 @@ async test "get_logs_with_options - timestamps" {
       println("Container started: \{c.get_id()}")
 
       // Wait for the command to complete
-      @async.sleep(1000000000)
+      @async.sleep(1000) // 1 second
 
       // Get logs with timestamps
       let options = LogOptions::default().with_timestamps(true)

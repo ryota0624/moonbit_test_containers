@@ -21,7 +21,7 @@ async test "volume mount - basic with tmpfs" {
 
       // Wait for command to complete
       println("[DEBUG] Sleeping for 2 seconds...")
-      @async.sleep(2000000000) // 2 seconds
+      @async.sleep(2000) // 2 seconds
       println("[DEBUG] Sleep completed")
 
       // Check logs
@@ -63,7 +63,7 @@ async test "volume mount - readonly" {
   match container {
     Ok(c) => {
       println("Container with readonly volume started: \{c.get_id()}")
-      @async.sleep(2000000000) // 2 seconds
+      @async.sleep(2000) // 2 seconds
       match c.get_logs() {
         Ok(logs) => {
           println("Readonly volume test logs: \{logs}")
@@ -93,7 +93,7 @@ async test "volume mount - multiple volumes" {
   match container {
     Ok(c) => {
       println("Container with multiple volumes started: \{c.get_id()}")
-      @async.sleep(2000000000) // 2 seconds
+      @async.sleep(2000) // 2 seconds
       match c.get_logs() {
         Ok(logs) => {
           println("Multiple volumes test logs: \{logs}")
