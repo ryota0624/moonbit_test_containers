@@ -2,7 +2,7 @@
   "is-main": true,
   "import": [
     {
-      "path": "username/moonbit_test_containers",
+      "path": "ryota0624/moonbit_test_containers",
       "alias": "lib"
     }
   ]

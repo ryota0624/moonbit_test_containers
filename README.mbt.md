@@ -26,7 +26,7 @@ Add to your `moon.mod.json`:
 ```json
 {
   "deps": {
-    "username/moonbit_test_containers": "0.1.0",
+    "ryota0624/moonbit_test_containers": "0.1.0",
     "moonbitlang/async": "0.16.5"
   }
 }

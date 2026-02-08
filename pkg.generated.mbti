@@ -1,0 +1,85 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "ryota0624/moonbit_test_containers"
+
+// Values
+
+// Errors
+
+// Types and methods
+pub struct Container {
+  id : String
+  image : ContainerImage
+  port_mappings : Array[(Int, Int)]
+}
+pub async fn Container::cleanup(Self) -> Result[Unit, TestContainerError]
+pub fn Container::get_host_port(Self, Int) -> Int?
+pub fn Container::get_id(Self) -> String
+pub async fn Container::get_logs(Self) -> Result[String, TestContainerError]
+pub async fn Container::get_logs_with_options(Self, LogOptions) -> Result[String, TestContainerError]
+pub async fn Container::remove(Self) -> Result[Unit, TestContainerError]
+pub async fn Container::stop(Self) -> Result[Unit, TestContainerError]
+pub async fn Container::stream_logs(Self, (String) -> Unit, options? : LogOptions) -> Result[Unit, TestContainerError]
+
+pub struct ContainerImage {
+  name : String
+  tag : String
+  exposed_ports : Array[Int]
+  env_vars : Array[(String, String)]
+  cmd : Array[String]
+  wait_strategy : WaitStrategy?
+  wait_timeout : Int
+  volumes : Array[VolumeMount]
+}
+pub fn ContainerImage::new(String, String) -> Self
+pub async fn ContainerImage::start(Self) -> Result[Container, TestContainerError]
+pub fn ContainerImage::with_cmd(Self, Array[String]) -> Self
+pub fn ContainerImage::with_env_var(Self, String, String) -> Self
+pub fn ContainerImage::with_exposed_port(Self, Int) -> Self
+pub fn ContainerImage::with_volume(Self, String, String) -> Self
+pub fn ContainerImage::with_volume_ro(Self, String, String) -> Self
+pub fn ContainerImage::with_wait_for(Self, WaitStrategy) -> Self
+pub fn ContainerImage::with_wait_timeout(Self, Int) -> Self
+
+pub struct LogOptions {
+  follow : Bool
+  timestamps : Bool
+  tail : Int?
+  since : String?
+  until : String?
+}
+pub fn LogOptions::default() -> Self
+pub fn LogOptions::with_follow(Self, Bool) -> Self
+pub fn LogOptions::with_since(Self, String) -> Self
+pub fn LogOptions::with_tail(Self, Int) -> Self
+pub fn LogOptions::with_timestamps(Self, Bool) -> Self
+pub fn LogOptions::with_until(Self, String) -> Self
+
+pub enum TestContainerError {
+  DockerCommandFailed(String)
+  ContainerNotFound(String)
+  PortMappingFailed(String)
+  InvalidConfiguration(String)
+  WaitStrategyTimeout(String)
+}
+pub fn TestContainerError::to_string(Self) -> String
+pub impl Eq for TestContainerError
+pub impl Show for TestContainerError
+
+pub struct VolumeMount {
+  host_path : String
+  container_path : String
+  read_only : Bool
+}
+
+pub enum WaitStrategy {
+  TcpPort(Int)
+  Seconds(Int)
+  HttpGet(String, Int)
+}
+pub impl Eq for WaitStrategy
+pub impl Show for WaitStrategy
+
+// Type aliases
+
+// Traits
+
