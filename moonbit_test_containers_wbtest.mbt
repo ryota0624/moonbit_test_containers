@@ -11,7 +11,6 @@ async test "redis container lifecycle" {
     .with_wait_for(WaitStrategy::TcpPort(6379))
     .with_wait_timeout(30)
     .start()
-
   match container {
     Ok(c) => {
       // Verify container ID is not empty
@@ -56,7 +55,6 @@ async test "container with env vars" {
     .with_env_var("TEST_VAR2", "value2")
     .with_cmd(["sleep", "5"])
     .start()
-
   match container {
     Ok(c) => {
       if c.get_id().length() == 0 {
@@ -66,6 +64,7 @@ async test "container with env vars" {
 
       // Cleanup
       let _ = c.cleanup()
+
     }
     Err(e) => {
       println("Failed to start container: \{e.to_string()}")
@@ -80,7 +79,6 @@ async test "stop and remove container" {
   let container = ContainerImage::new("alpine", "3.19")
     .with_cmd(["sleep", "10"])
     .start()
-
   match container {
     Ok(c) => {
       let id = c.get_id()
@@ -114,15 +112,11 @@ async test "stop and remove container" {
 ///|
 /// Test error handling for invalid image
 async test "invalid image error handling" {
-  let container = ContainerImage::new("nonexistent-image-xyz", "999.999.999")
-    .start()
-
+  let container = ContainerImage::new("nonexistent-image-xyz", "999.999.999").start()
   match container {
     Ok(_) => abort("Expected error but got success")
-    Err(e) => {
-      println("Got expected error: \{e.to_string()}")
-      // Test passed - we expected an error
-    }
+    Err(e) => println("Got expected error: \{e.to_string()}")
+    // Test passed - we expected an error
   }
 }
 
@@ -135,7 +129,6 @@ async test "wait strategy tcp port" {
     .with_wait_for(WaitStrategy::TcpPort(6379))
     .with_wait_timeout(30)
     .start()
-
   match container {
     Ok(c) => {
       println("Redis started with TCP port wait strategy")
@@ -143,14 +136,13 @@ async test "wait strategy tcp port" {
 
       // Verify port is accessible
       match c.get_host_port(6379) {
-        Some(port) => {
-          println("Redis accessible on port: \{port}")
-        }
+        Some(port) => println("Redis accessible on port: \{port}")
         None => abort("Port not mapped")
       }
 
       // Cleanup
       let _ = c.cleanup()
+
     }
     Err(e) => {
       println("Failed: \{e.to_string()}")
@@ -167,7 +159,6 @@ async test "wait strategy seconds" {
     .with_cmd(["sleep", "10"])
     .with_wait_for(WaitStrategy::Seconds(2))
     .start()
-
   match container {
     Ok(c) => {
       println("Alpine started with delay wait strategy")
@@ -175,6 +166,7 @@ async test "wait strategy seconds" {
 
       // Cleanup
       let _ = c.cleanup()
+
     }
     Err(e) => {
       println("Failed: \{e.to_string()}")
@@ -192,7 +184,6 @@ async test "wait strategy http get" {
     .with_wait_for(WaitStrategy::HttpGet("/", 200))
     .with_wait_timeout(30)
     .start()
-
   match container {
     Ok(c) => {
       println("Nginx started with HTTP wait strategy")
@@ -200,9 +191,7 @@ async test "wait strategy http get" {
 
       // Verify port is accessible
       match c.get_host_port(80) {
-        Some(port) => {
-          println("Nginx accessible on port: \{port}")
-        }
+        Some(port) => println("Nginx accessible on port: \{port}")
         None => abort("Port not mapped")
       }
 
@@ -233,7 +222,6 @@ async test "wait strategy http get custom path" {
     .with_wait_for(WaitStrategy::HttpGet("/index.html", 200))
     .with_wait_timeout(30)
     .start()
-
   match container {
     Ok(c) => {
       println("Nginx started with HTTP wait strategy (custom path)")
@@ -241,6 +229,7 @@ async test "wait strategy http get custom path" {
 
       // Cleanup
       let _ = c.cleanup()
+
     }
     Err(e) => {
       println("Failed: \{e.to_string()}")
@@ -258,13 +247,10 @@ async test "wait strategy http get no ports" {
     .with_wait_for(WaitStrategy::HttpGet("/", 200))
     .with_wait_timeout(5)
     .start()
-
   match container {
     Ok(_) => abort("Expected error but got success")
-    Err(e) => {
-      println("Got expected error: \{e.to_string()}")
-      // Test passed - we expected a configuration error
-    }
+    Err(e) => println("Got expected error: \{e.to_string()}")
+    // Test passed - we expected a configuration error
   }
 }
 
@@ -275,7 +261,6 @@ async test "get_logs - basic" {
   let container = ContainerImage::new("alpine", "3.19")
     .with_cmd(["sh", "-c", "echo 'test log message'"])
     .start()
-
   match container {
     Ok(c) => {
       println("Container started: \{c.get_id()}")
@@ -299,6 +284,7 @@ async test "get_logs - basic" {
 
       // Cleanup
       let _ = c.cleanup()
+
     }
     Err(e) => {
       println("Failed to start container: \{e.to_string()}")
@@ -314,7 +300,6 @@ async test "get_logs - multiple lines" {
   let container = ContainerImage::new("alpine", "3.19")
     .with_cmd(["sh", "-c", "echo 'line 1'; echo 'line 2'; echo 'line 3'"])
     .start()
-
   match container {
     Ok(c) => {
       println("Container started: \{c.get_id()}")
@@ -326,7 +311,9 @@ async test "get_logs - multiple lines" {
       match c.get_logs() {
         Ok(logs) => {
           println("Logs retrieved (multiple lines)")
-          if !logs.contains("line 1") || !logs.contains("line 2") || !logs.contains("line 3") {
+          if !logs.contains("line 1") ||
+            !logs.contains("line 2") ||
+            !logs.contains("line 3") {
             abort("Logs do not contain all expected lines")
           }
         }
@@ -338,6 +325,7 @@ async test "get_logs - multiple lines" {
 
       // Cleanup
       let _ = c.cleanup()
+
     }
     Err(e) => {
       println("Failed to start container: \{e.to_string()}")
@@ -353,7 +341,6 @@ async test "get_logs - empty log" {
   let container = ContainerImage::new("alpine", "3.19")
     .with_cmd(["sh", "-c", "exit 0"])
     .start()
-
   match container {
     Ok(c) => {
       println("Container started: \{c.get_id()}")
@@ -363,10 +350,8 @@ async test "get_logs - empty log" {
 
       // Get logs
       match c.get_logs() {
-        Ok(logs) => {
-          println("Empty logs retrieved successfully: '\{logs}'")
-          // Empty or very short output is expected
-        }
+        Ok(logs) => println("Empty logs retrieved successfully: '\{logs}'")
+        // Empty or very short output is expected
         Err(e) => {
           println("Failed to get logs: \{e.to_string()}")
           abort("get_logs failed")
@@ -375,6 +360,7 @@ async test "get_logs - empty log" {
 
       // Cleanup
       let _ = c.cleanup()
+
     }
     Err(e) => {
       println("Failed to start container: \{e.to_string()}")
@@ -390,7 +376,6 @@ async test "get_logs - unicode characters" {
   let container = ContainerImage::new("alpine", "3.19")
     .with_cmd(["sh", "-c", "echo 'こんにちは世界 🌍'"])
     .start()
-
   match container {
     Ok(c) => {
       println("Container started: \{c.get_id()}")
@@ -414,6 +399,7 @@ async test "get_logs - unicode characters" {
 
       // Cleanup
       let _ = c.cleanup()
+
     }
     Err(e) => {
       println("Failed to start container: \{e.to_string()}")
@@ -429,7 +415,6 @@ async test "get_logs_with_options - tail" {
   let container = ContainerImage::new("alpine", "3.19")
     .with_cmd(["sh", "-c", "for i in $(seq 1 20); do echo \"Line $i\"; done"])
     .start()
-
   match container {
     Ok(c) => {
       println("Container started: \{c.get_id()}")
@@ -458,6 +443,7 @@ async test "get_logs_with_options - tail" {
 
       // Cleanup
       let _ = c.cleanup()
+
     }
     Err(e) => {
       println("Failed to start container: \{e.to_string()}")
@@ -473,7 +459,6 @@ async test "get_logs_with_options - timestamps" {
   let container = ContainerImage::new("alpine", "3.19")
     .with_cmd(["sh", "-c", "echo 'timestamped message'"])
     .start()
-
   match container {
     Ok(c) => {
       println("Container started: \{c.get_id()}")
@@ -500,6 +485,7 @@ async test "get_logs_with_options - timestamps" {
 
       // Cleanup
       let _ = c.cleanup()
+
     }
     Err(e) => {
       println("Failed to start container: \{e.to_string()}")
@@ -515,7 +501,6 @@ async test "get_logs_with_options - follow error" {
   let container = ContainerImage::new("alpine", "3.19")
     .with_cmd(["sleep", "10"])
     .start()
-
   match container {
     Ok(c) => {
       println("Container started: \{c.get_id()}")
@@ -527,14 +512,13 @@ async test "get_logs_with_options - follow error" {
           let _ = c.cleanup()
           abort("Expected error for follow option")
         }
-        Err(e) => {
-          println("Got expected error: \{e.to_string()}")
-          // Test passed - we expected an error
-        }
+        Err(e) => println("Got expected error: \{e.to_string()}")
+        // Test passed - we expected an error
       }
 
       // Cleanup
       let _ = c.cleanup()
+
     }
     Err(e) => {
       println("Failed to start container: \{e.to_string()}")
@@ -548,9 +532,10 @@ async test "get_logs_with_options - follow error" {
 async test "stream_logs - basic" {
   // Create a container that outputs messages over time
   let container = ContainerImage::new("alpine", "3.19")
-    .with_cmd(["sh", "-c", "echo 'stream line 1'; echo 'stream line 2'; echo 'stream line 3'"])
+    .with_cmd([
+      "sh", "-c", "echo 'stream line 1'; echo 'stream line 2'; echo 'stream line 3'",
+    ])
     .start()
-
   match container {
     Ok(c) => {
       println("Container started for streaming: \{c.get_id()}")
@@ -573,7 +558,10 @@ async test "stream_logs - basic" {
             abort("No lines received from stream")
           }
           // Check if we got expected content
-          let all_text = lines.iter().fold("", fn(acc, line) { acc + line })
+          let mut all_text = ""
+          for i = 0; i < lines.length(); i = i + 1 {
+            all_text = all_text + lines[i]
+          }
           if !all_text.contains("stream line") {
             abort("Streamed logs do not contain expected content")
           }
@@ -586,6 +574,7 @@ async test "stream_logs - basic" {
 
       // Cleanup
       let _ = c.cleanup()
+
     }
     Err(e) => {
       println("Failed to start container: \{e.to_string()}")
@@ -601,7 +590,6 @@ async test "stream_logs - callback count" {
   let container = ContainerImage::new("alpine", "3.19")
     .with_cmd(["sh", "-c", "for i in 1 2 3 4 5; do echo \"Count $i\"; done"])
     .start()
-
   match container {
     Ok(c) => {
       println("Container started for counting: \{c.get_id()}")
@@ -636,6 +624,7 @@ async test "stream_logs - callback count" {
 
       // Cleanup
       let _ = c.cleanup()
+
     }
     Err(e) => {
       println("Failed to start container: \{e.to_string()}")
@@ -653,7 +642,6 @@ async test "stream_logs - redis container" {
     .with_wait_for(WaitStrategy::TcpPort(6379))
     .with_wait_timeout(30)
     .start()
-
   match container {
     Ok(c) => {
       println("Redis container started: \{c.get_id()}")
@@ -669,14 +657,17 @@ async test "stream_logs - redis container" {
 
       // Stream logs with tail to limit output
       let options = LogOptions::default().with_tail(20)
-      match c.stream_logs(callback, options) {
+      match c.stream_logs(callback, options~) {
         Ok(_) => {
           println("Redis logs streamed: \{lines.length()} lines")
           if lines.length() == 0 {
             abort("No logs received from Redis")
           }
           // Redis logs typically contain "Ready to accept connections"
-          let all_text = lines.iter().fold("", fn(acc, line) { acc + line })
+          let mut all_text = ""
+          for i = 0; i < lines.length(); i = i + 1 {
+            all_text = all_text + lines[i]
+          }
           if !all_text.contains("Ready") && !all_text.contains("Redis") {
             println("Warning: Redis logs may not contain expected patterns")
           }
@@ -689,6 +680,7 @@ async test "stream_logs - redis container" {
 
       // Cleanup
       let _ = c.cleanup()
+
     }
     Err(e) => {
       println("Failed to start Redis container: \{e.to_string()}")

@@ -139,6 +139,7 @@ You can also wait for custom paths and status codes:
 
 ```moonbit
 // Wait for a health check endpoint to return 200
+
 ///|
 let container = ContainerImage::new("myapp", "latest")
   .with_exposed_port(8080)
