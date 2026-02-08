@@ -54,7 +54,7 @@ fn build_logs_args(
 /// Get all logs from the container
 pub async fn Container::get_logs(
   self : Container,
-) -> Result[String, TestContainerError] {
+) -> Result[String, TestContainerError] noraise{
   let args = ["logs", self.id]
   exec_docker(args)
 }

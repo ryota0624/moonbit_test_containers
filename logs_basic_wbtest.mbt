@@ -1,11 +1,8 @@
 // Integration tests for basic log retrieval
 // Note: These tests require Docker to be installed and running
-
 ///|
 /// Phase 1: Test basic log retrieval
 async test "logsbasic" {
-  println("Starting basic log retrieval test")
-  // Create a container that outputs a simple message
   let container = ContainerImage::new("alpine", "3.19")
     .with_cmd(["sh", "-c", "echo 'test log message'"])
     .start()
@@ -14,7 +11,9 @@ async test "logsbasic" {
       println("Container started: \{c.get_id()}")
 
       // Wait a moment for the command to complete
-      @async.sleep(1000000000) // 1 second in nanoseconds
+      @async.sleep(1000000000) catch {
+        _ => ()
+      } // 1 second in nanoseconds
 
       // Get logs
       match c.get_logs() {
@@ -31,7 +30,12 @@ async test "logsbasic" {
       }
 
       // Cleanup
-      let _ = c.cleanup()
+      let _ = c.cleanup() catch {
+        _ => {
+          println("Failed to cleanup container \{c.get_id()}")
+          return
+        }
+      }
 
     }
     Err(e) => {
@@ -39,6 +43,9 @@ async test "logsbasic" {
       abort("Container start failed")
     }
   }
+  println("Starting basic log retrieval test")
+  // Create a container that outputs a simple message
+
 }
 
 // ///|

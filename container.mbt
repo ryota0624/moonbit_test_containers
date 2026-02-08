@@ -4,7 +4,7 @@
 /// Start a container based on the image configuration
 pub async fn ContainerImage::start(
   self : ContainerImage,
-) -> Result[Container, TestContainerError] {
+) -> Result[Container, TestContainerError] noraise {
   // Build docker run command arguments
   let args : Array[String] = ["run", "-d"]
 
@@ -53,7 +53,12 @@ pub async fn ContainerImage::start(
                 Ok(_) => Ok(container)
                 Err(e) => {
                   // Cleanup container on wait failure
-                  let _ = container.cleanup()
+                  let _ = container.cleanup() catch {
+                    _ => {
+                      println("Failed to cleanup container \{container.get_id()} after wait failure")
+                      return Err(e)
+                    }
+                  }
                   Err(e)
                 }
               }
@@ -70,7 +75,7 @@ pub async fn ContainerImage::start(
 /// Update port mappings by querying Docker
 async fn Container::update_port_mappings(
   self : Container,
-) -> Result[Unit, TestContainerError] {
+) -> Result[Unit, TestContainerError] noraise{
   if self.image.exposed_ports.length() == 0 {
     return Ok(())
   }
@@ -111,7 +116,9 @@ async fn Container::update_port_mappings(
             println(
               "Warning: Port mapping failed (attempt \{attempt}/\{max_retries}): \{error_msg}",
             )
-            @async.sleep(1000000000) // 1 second in nanoseconds
+            @async.sleep(1000000000) catch {
+              _ => ()
+            } // 1 second in nanoseconds
             last_error = Some(e)
           } else {
             // Permanent error or max retries reached

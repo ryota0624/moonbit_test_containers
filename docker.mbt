@@ -4,7 +4,7 @@
 /// Execute a Docker CLI command and return the output
 async fn exec_docker(
   args : Array[String],
-) -> Result[String, TestContainerError] {
+) -> Result[String, TestContainerError] noraise {
   let command = "docker"
   try {
     let (status, output) = @process.collect_output_merged(command, args)

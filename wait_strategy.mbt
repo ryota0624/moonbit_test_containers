@@ -44,19 +44,28 @@ async fn wait_for_tcp_port(
   host : String,
   port : Int,
   timeout_seconds : Int,
-) -> Result[Unit, TestContainerError] {
+) -> Result[Unit, TestContainerError] noraise{
   // Poll every 500ms
   let poll_interval_ms = 500
   let max_attempts = timeout_seconds * 1000 / poll_interval_ms
   for attempt = 0; attempt < max_attempts; attempt = attempt + 1 {
-    if check_tcp_port(host, port) {
+    let port_check = check_tcp_port(host, port) catch {
+      _ => false
+    } 
+    if port_check {
       return Ok(())
     }
 
-    // Sleep between attempts
-    // Using a simple busy-wait for now - will improve with proper async sleep
-    let sleep_ms = poll_interval_ms
-    let _ = @process.collect_output_merged("sleep", ["0.\{sleep_ms / 1000}"])
+    // Sleep between attempts using async sleep
+    let sleep_ns = poll_interval_ms * 1000000 // Convert ms to nanoseconds
+    @async.sleep(sleep_ns) catch {
+      _ => {
+        // Ignore sleep errors
+        return Err(
+          DockerCommandFailed("Sleep failed during wait"),
+        )
+      }
+    }
 
   } else {
     Err(
@@ -75,19 +84,28 @@ async fn wait_for_http_endpoint(
   path : String,
   expected_status : Int,
   timeout_seconds : Int,
-) -> Result[Unit, TestContainerError] {
+) -> Result[Unit, TestContainerError] noraise {
   // Poll every 500ms
   let poll_interval_ms = 500
   let max_attempts = timeout_seconds * 1000 / poll_interval_ms
   for attempt = 0; attempt < max_attempts; attempt = attempt + 1 {
-    if check_http_endpoint(host, port, path, expected_status) {
+    let ready = check_http_endpoint(host, port, path, expected_status) catch {
+      _ => false
+    }
+    if ready {
       return Ok(())
     }
 
-    // Sleep between attempts
-    // Using a simple busy-wait for now - will improve with proper async sleep
-    let sleep_ms = poll_interval_ms
-    let _ = @process.collect_output_merged("sleep", ["0.\{sleep_ms / 1000}"])
+    // Sleep between attempts using async sleep
+    let sleep_ns = poll_interval_ms * 1000000 // Convert ms to nanoseconds
+    @async.sleep(sleep_ns) catch {
+      _ => {
+        // Ignore sleep errors
+        return Err(
+          DockerCommandFailed("Sleep failed during wait"),
+        )
+      }
+    }
 
   } else {
     Err(
@@ -104,12 +122,13 @@ async fn wait_for_container(
   container : Container,
   strategy : WaitStrategy,
   timeout : Int,
-) -> Result[Unit, TestContainerError] {
+) -> Result[Unit, TestContainerError] noraise {
   match strategy {
     Seconds(seconds) =>
-      // Simple delay using sleep command
+      // Simple delay using async sleep
       try {
-        let _ = @process.collect_output_merged("sleep", [seconds.to_string()])
+        let sleep_ns = seconds * 1000000000 // Convert seconds to nanoseconds
+        @async.sleep(sleep_ns)
         Ok(())
       } catch {
         e => Err(DockerCommandFailed("Sleep failed: \{e.to_string()}"))
