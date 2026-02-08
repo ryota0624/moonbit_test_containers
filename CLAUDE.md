@@ -35,7 +35,7 @@
 ### ドキュメント配置
 
 - プロジェクトルートまたは適切なディレクトリに配置
-- ファイル名: `docs/steering/<作業名>_YYYYMMDD.md`（例：`docs/steering/testcontainers_implementation_20260208.md`）
+- ファイル名: `docs/steering/YYYYMMDD_<作業名>.md`（例：`docs/steering/20260208_testcontainers_implementation.md`）
 
 ### 例
 
@@ -101,7 +101,7 @@
 ### ドキュメント配置
 
 - プロジェクトルートまたは適切なディレクトリに配置
-- ファイル名: `docs/completed/<作業名>_YYYYMMDD.md`（例：`docs/completed/testcontainers_implementation_20260208.md`）
+- ファイル名: `docs/completed/YYYYMMDD_<作業名>.md`（例：`docs/completed/20260208_testcontainers_implementation.md`）
 
 ### 例
 
