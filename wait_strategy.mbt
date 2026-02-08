@@ -56,9 +56,8 @@ async fn wait_for_tcp_port(
       return Ok(())
     }
 
-    // Sleep between attempts using async sleep
-    let sleep_ns = poll_interval_ms * 1000000 // Convert ms to nanoseconds
-    @async.sleep(sleep_ns) catch {
+    // Sleep between attempts using async sleep (milliseconds)
+    @async.sleep(poll_interval_ms) catch {
       _ => {
         // Ignore sleep errors
         return Err(
@@ -96,9 +95,8 @@ async fn wait_for_http_endpoint(
       return Ok(())
     }
 
-    // Sleep between attempts using async sleep
-    let sleep_ns = poll_interval_ms * 1000000 // Convert ms to nanoseconds
-    @async.sleep(sleep_ns) catch {
+    // Sleep between attempts using async sleep (milliseconds)
+    @async.sleep(poll_interval_ms) catch {
       _ => {
         // Ignore sleep errors
         return Err(
@@ -125,10 +123,10 @@ async fn wait_for_container(
 ) -> Result[Unit, TestContainerError] noraise {
   match strategy {
     Seconds(seconds) =>
-      // Simple delay using async sleep
+      // Simple delay using async sleep (milliseconds)
       try {
-        let sleep_ns = seconds * 1000000000 // Convert seconds to nanoseconds
-        @async.sleep(sleep_ns)
+        let sleep_ms = seconds * 1000 // Convert seconds to milliseconds
+        @async.sleep(sleep_ms)
         Ok(())
       } catch {
         e => Err(DockerCommandFailed("Sleep failed: \{e.to_string()}"))
