@@ -4,47 +4,38 @@
 ///|
 /// Test basic volume mount with tmpfs
 async test "volume mount - basic with tmpfs" {
-  println("[TEST START] volume mount - basic with tmpfs")
   // Use alpine with a simple test: mount tmpfs and write to it
   // This verifies that volume mounting works at the Docker level
-  println("[DEBUG] Creating container image...")
   let container = ContainerImage::new("alpine", "3.19")
     .with_volume("/tmp", "/mnt/host_tmp")
     .with_cmd([
       "sh", "-c", "ls -la /mnt/host_tmp && echo 'Volume mount successful'",
     ])
-  println("[DEBUG] Starting container...")
-  let container = container.start()
+    .start()
   match container {
     Ok(c) => {
-      println("[DEBUG] Container started successfully: \{c.get_id()}")
+      println("Container started: \{c.get_id()}")
 
       // Wait for command to complete
-      println("[DEBUG] Sleeping for 2 seconds...")
       @async.sleep(2000) // 2 seconds
-      println("[DEBUG] Sleep completed")
 
       // Check logs
-      println("[DEBUG] Getting container logs...")
       match c.get_logs() {
         Ok(logs) => {
-          println("[DEBUG] Logs retrieved successfully")
           println("Volume mount test logs: \{logs}")
           if !logs.contains("Volume mount successful") {
             abort("Volume mount may have failed")
           }
         }
         Err(e) => {
-          println("[DEBUG] Failed to get logs: \{e.to_string()}")
+          println("Failed to get logs: \{e.to_string()}")
           abort("get_logs failed")
         }
       }
-      println("[DEBUG] Cleaning up container...")
       let _ = c.cleanup()
-      println("[TEST COMPLETE] volume mount - basic with tmpfs")
     }
     Err(e) => {
-      println("[DEBUG] Failed to start container with volume: \{e.to_string()}")
+      println("Failed to start container with volume: \{e.to_string()}")
       abort("Container start with volume failed")
     }
   }
