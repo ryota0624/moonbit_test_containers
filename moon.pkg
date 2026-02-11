@@ -8,6 +8,7 @@ import {
 }
 
 options(
+  "supported-targets": [ "native", "js" ],
   targets: {
     "docker_js.mbt": [ "js" ],
     "docker_native.mbt": [ "native" ],
