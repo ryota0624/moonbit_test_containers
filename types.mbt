@@ -3,7 +3,7 @@
 
 ///|
 /// Wait strategy for container readiness
-pub enum WaitStrategy {
+pub(all) enum WaitStrategy {
   TcpPort(Int) // Wait for TCP port to be open
   Seconds(Int) // Wait for a fixed number of seconds
   HttpGet(String, Int) // Wait for HTTP endpoint (path, expected_status_code)
@@ -12,7 +12,7 @@ pub enum WaitStrategy {
 
 ///|
 /// Error type for testcontainers operations
-pub enum TestContainerError {
+pub(all) enum TestContainerError {
   DockerCommandFailed(String)
   ContainerNotFound(String)
   PortMappingFailed(String)

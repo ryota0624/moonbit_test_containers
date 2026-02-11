@@ -38,12 +38,17 @@ pub async fn ContainerImage::start(
   for i = 0; i < self.cmd.length(); i = i + 1 {
     args.push(self.cmd[i])
   }
-  let exec_result : Result[String, _] = exec_docker(args)
-  guard exec_result is Ok(container_id) else {
-    return Err(
-      DockerCommandFailed("Failed to start container for image \{self.name}"),
-    )
+  let exec_result : Result[String, TestContainerError] = exec_docker(args)
+  let container_id = match exec_result {
+    Err(e) =>
+      return Err(
+        DockerCommandFailed(
+          "Failed to start container for image \{self.name}:\n\{e.to_string()}",
+        ),
+      )
+    Ok(c_id) => c_id
   }
+
   let container = { id: container_id, image: self, port_mappings: [] }
   guard container.update_port_mappings() is Ok(_) else {
     return Err(
@@ -52,22 +57,21 @@ pub async fn ContainerImage::start(
       ),
     )
   }
+  println(
+    "Started container \{container_id} for image \{self.name}:\{self.tag}",
+  )
   guard self.wait_strategy is Some(strategy) else { return Ok(container) }
   match wait_for_container(container, strategy, self.wait_timeout) {
     Ok(_) => ()
     Err(wait_error) => {
-      defer (fn() -> Unit noraise {
-        run_async(async fn() -> Unit noraise {
-          let _ = container.cleanup() catch {
-            _ => {
-              println(
-                "Failed to cleanup container \{container.get_id()} after wait failure",
-              )
-              Ok(())
-            }
-          }
-        })
-      })()
+      let _ = container.cleanup() catch {
+        _ => {
+          println(
+            "Warning: Failed to cleanup container \{container_id} after wait failure",
+          )
+          return Err(wait_error)
+        }
+      }
       return Err(wait_error)
     }
   }
@@ -196,7 +200,3 @@ pub async fn Container::cleanup(
   let _ = self.stop()
   self.remove()
 }
-
-///|
-/// `run_async` spawn a new coroutine and execute an async function in it
-fn run_async(f : async () -> Unit noraise) -> Unit = "%async.run"

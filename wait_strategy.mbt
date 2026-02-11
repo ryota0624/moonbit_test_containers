@@ -4,11 +4,6 @@
 // Backend-specific implementations:
 // - check_tcp_port: See wait_strategy_native.mbt and wait_strategy_js.mbt
 // - check_http_endpoint: See wait_strategy_native.mbt and wait_strategy_js.mbt
-//
-// NOTE (2026-02-08): Error handling in this file has been simplified to work around
-// a MoonBit compiler C code generation issue. Complex catch blocks with closures
-// can cause "too many arguments to function" errors in generated C code.
-// This affects native backend only; JavaScript backend works correctly.
 
 ///|
 /// Wait for TCP port to be open with timeout
@@ -16,10 +11,8 @@ async fn wait_for_tcp_port(
   host : String,
   port : Int,
   timeout_seconds : Int,
+  poll_interval_ms? : Int = 500,
 ) -> Result[Unit, TestContainerError] noraise {
-  // Poll every 500ms
-  // NOTE: Port checks are serialized by semaphore to prevent concurrent process overload
-  let poll_interval_ms = 500
   let max_attempts = timeout_seconds * 1000 / poll_interval_ms
   for attempt = 0; attempt < max_attempts; attempt = attempt + 1 {
     // Check port - ignore errors and treat as not ready
@@ -49,10 +42,8 @@ async fn wait_for_http_endpoint(
   path : String,
   expected_status : Int,
   timeout_seconds : Int,
+  poll_interval_ms? : Int = 500,
 ) -> Result[Unit, TestContainerError] noraise {
-  // Poll every 500ms
-  // NOTE: Port checks are serialized by semaphore to prevent concurrent process overload
-  let poll_interval_ms = 500
   let max_attempts = timeout_seconds * 1000 / poll_interval_ms
   for attempt = 0; attempt < max_attempts; attempt = attempt + 1 {
     // Check endpoint - ignore errors and treat as not ready
@@ -82,11 +73,11 @@ async fn wait_for_log_message(
   container : Container,
   message : String,
   timeout_seconds : Int,
+  poll_interval_ms? : Int = 500,
 ) -> Result[Unit, TestContainerError] noraise {
-  // Poll every 500ms (consistent with other wait strategies)
-  let poll_interval_ms = 500
   let max_attempts = timeout_seconds * 1000 / poll_interval_ms
   for attempt = 0; attempt < max_attempts; attempt = attempt + 1 {
+
     // Get recent logs (last 100 lines to limit memory usage)
     let log_options = LogOptions::default().with_tail(100)
 

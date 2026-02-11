@@ -1,3 +1,0 @@
-[submodule ".moonbit-async"]
-	path = .moonbit-async
-	url = https://github.com/moonbitlang/async.git

@@ -31,27 +31,30 @@ extern "js" fn exec_docker_sync(
 ) -> Array[AnyValue] =
   #| (command, args) => {
   #|   // Import Node.js child_process module
-  #|   const { execSync } = require('child_process');
+  #|   const { spawnSync } = require('child_process');
   #|
-  #|   try {
-  #|     // Join arguments and execute command
-  #|     const argsStr = args.join(' ');
-  #|     const fullCommand = command + ' ' + argsStr;
+  #|   // Use spawnSync to capture both stdout and stderr
+  #|   const result = spawnSync(command, args, {
+  #|     encoding: 'utf8',
+  #|     maxBuffer: 10 * 1024 * 1024  // 10MB buffer
+  #|   });
   #|
-  #|     // Execute with options
-  #|     const output = execSync(fullCommand, {
-  #|       encoding: 'utf8',
-  #|       stdio: ['pipe', 'pipe', 'pipe'],
-  #|       maxBuffer: 10 * 1024 * 1024  // 10MB buffer
-  #|     });
+  #|   // Combine stdout and stderr
+  #|   const stdout = result.stdout || "";
+  #|   const stderr = result.stderr || "";
+  #|   const output = stdout + stderr;
   #|
-  #|     // Success: return array [status, output]
-  #|     return [0, output || ""];
-  #|   } catch (error) {
-  #|     // Error: return array [status, error message]
-  #|     const status = error.status || 1;
-  #|     const output = error.stderr ? error.stderr.toString() : (error.message || "");
-  #|     return [status, output || ""];
+  #|   // Check exit status
+  #|   if (result.status === 0 || result.status === null) {
+  #|     // Success: return array [status, combined output]
+  #|     return [0, output];
+  #|   } else if (result.error) {
+  #|     // Error launching process (e.g., command not found)
+  #|     const status = result.status || 1;
+  #|     return [status, result.error.message || output];
+  #|   } else {
+  #|     // Non-zero exit status
+  #|     return [result.status, output];
   #|   }
   #| }
 
