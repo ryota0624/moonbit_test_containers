@@ -5,7 +5,7 @@
     "moonbitlang/async": "0.16.6"
   },
   "readme": "README.mbt.md",
-  "repository": "",
+  "repository": "https://github.com/ryota0624/moonbit_test_containers",
   "license": "Apache-2.0",
   "keywords": ["containers", "docker", "test"],
   "description": ",containers implementation for MoonBit",
