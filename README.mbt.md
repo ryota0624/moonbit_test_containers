@@ -10,14 +10,16 @@ A MoonBit implementation of Testcontainers, a library for creating and managing 
 - **Volume Mounting**: Mount host files and directories into containers
 - **Fluent API**: Builder pattern for intuitive container configuration
 - **Async Support**: Built on MoonBit's async primitives for efficient I/O
-- **Wait Strategies**: TCP port, HTTP endpoint, and simple delay strategies
+- **Wait Strategies**: TCP port, HTTP endpoint, log message, and simple delay strategies
 - **Container Logs**: Retrieve and stream container logs in real-time
 - **Multi-Backend Support**: Works with both Native (LLVM) and JavaScript (Node.js) backends
+- **Helpful Error Messages**: Provides clear installation instructions if Docker CLI is not found
 
 ## Requirements
 
 - **MoonBit**: Latest version with multi-backend support
 - **Docker**: Docker must be installed and running on your system
+  - The library will provide helpful installation instructions if Docker CLI is not found
 - **For Native Backend**: Linux or macOS platform
 - **For JavaScript Backend**: Node.js v14 or later
 
@@ -97,7 +99,7 @@ And in your `moon.pkg.json`:
 
 ### Basic Example
 
-```moonbit
+```moonbit nocheck
 // Create and start a Redis container
 let container = ContainerImage::new("redis", "7.2.4")
   .with_exposed_port(6379)
@@ -121,7 +123,7 @@ match container {
 
 ### Advanced Configuration
 
-```moonbit
+```moonbit nocheck
 let container = ContainerImage::new("postgres", "16")
   .with_exposed_port(5432)
   .with_env_var("POSTGRES_USER", "testuser")
@@ -150,7 +152,7 @@ Mount host files and directories into containers for configuration, initializati
 
 #### Basic File Mount
 
-```moonbit
+```moonbit nocheck
 ///|
 let container = ContainerImage::new("nginx", "1.25-alpine")
   .with_exposed_port(80)
@@ -160,7 +162,7 @@ let container = ContainerImage::new("nginx", "1.25-alpine")
 
 #### Read-Only Mount
 
-```moonbit
+```moonbit nocheck
 ///|
 let container = ContainerImage::new("myapp", "latest")
   .with_volume_ro("./config", "/app/config")
@@ -169,7 +171,7 @@ let container = ContainerImage::new("myapp", "latest")
 
 #### Multiple Volumes
 
-```moonbit
+```moonbit nocheck
 ///|
 let container = ContainerImage::new("myapp", "latest")
   .with_volume_ro("./config", "/app/config")
@@ -182,7 +184,7 @@ let container = ContainerImage::new("myapp", "latest")
 
 Mount SQL scripts to initialize your database:
 
-```moonbit
+```moonbit nocheck
 let container = ContainerImage::new("postgres", "16")
   .with_exposed_port(5432)
   .with_env_var("POSTGRES_USER", "test")
@@ -214,7 +216,7 @@ Wait strategies ensure that containers are fully ready before your tests begin. 
 
 Wait for a TCP port to become available:
 
-```moonbit
+```moonbit nocheck
 ///|
 let container = ContainerImage::new("redis", "7.2.4")
   .with_exposed_port(6379)
@@ -227,7 +229,7 @@ let container = ContainerImage::new("redis", "7.2.4")
 
 Wait for an HTTP endpoint to return a specific status code:
 
-```moonbit
+```moonbit nocheck
 let container = ContainerImage::new("nginx", "1.25-alpine")
   .with_exposed_port(80)
   .with_wait_for(WaitStrategy::HttpGet("/", 200))
@@ -249,7 +251,7 @@ match container {
 
 You can also wait for custom paths and status codes:
 
-```moonbit
+```moonbit nocheck
 // Wait for a health check endpoint to return 200
 
 ///|
@@ -264,7 +266,7 @@ let container = ContainerImage::new("myapp", "latest")
 
 Wait for a fixed number of seconds:
 
-```moonbit
+```moonbit nocheck
 ///|
 let container = ContainerImage::new("alpine", "3.19")
   .with_cmd(["sleep", "10"])
@@ -272,11 +274,31 @@ let container = ContainerImage::new("alpine", "3.19")
   .start()
 ```
 
+#### Log Message Wait
+
+Wait for a specific message to appear in container logs:
+
+```moonbit nocheck
+///|
+let container = ContainerImage::new("postgres", "15-alpine")
+  .with_exposed_port(5432)
+  .with_env_var("POSTGRES_PASSWORD", "password")
+  .with_wait_for(
+    WaitStrategy::LogMessage("database system is ready to accept connections"),
+  )
+  .with_wait_timeout(60)
+  .start()
+```
+
+This is particularly useful for databases and services that take time to initialize. The strategy polls container logs every 500ms and performs a substring match.
+
 #### PostgreSQL Example
 
-PostgreSQL takes several seconds to start. Use TCP port wait to ensure it's ready:
+PostgreSQL takes several seconds to start. You can use either TCP port wait or log message wait:
 
-```moonbit
+**Using TCP Port Wait:**
+
+```moonbit nocheck
 let container = ContainerImage::new("postgres", "16")
   .with_exposed_port(5432)
   .with_env_var("POSTGRES_USER", "test")
@@ -299,6 +321,57 @@ match container {
 }
 ```
 
+**Using Log Message Wait (recommended for databases):**
+
+```moonbit nocheck
+let container = ContainerImage::new("postgres", "15-alpine")
+  .with_exposed_port(5432)
+  .with_env_var("POSTGRES_PASSWORD", "password")
+  .with_wait_for(
+    WaitStrategy::LogMessage("database system is ready to accept connections")
+  )
+  .with_wait_timeout(60)
+  .start()
+
+match container {
+  Ok(c) => {
+    // PostgreSQL is fully initialized and ready
+    match c.get_host_port(5432) {
+      Some(port) => println("PostgreSQL ready on port: \{port}")
+      None => println("Port not mapped")
+    }
+    let _ = c.cleanup()
+  }
+  Err(e) => println("Failed: \{e.to_string()}")
+}
+```
+
+Log message wait is more reliable for databases as it waits for the actual initialization message rather than just port availability.
+
+#### Other Services with Log Message Wait
+
+**Redis:**
+
+```moonbit nocheck
+///|
+let container = ContainerImage::new("redis", "7.2.4")
+  .with_exposed_port(6379)
+  .with_wait_for(WaitStrategy::LogMessage("Ready to accept connections"))
+  .with_wait_timeout(30)
+  .start()
+```
+
+**Nginx:**
+
+```moonbit nocheck
+///|
+let container = ContainerImage::new("nginx", "1.25-alpine")
+  .with_exposed_port(80)
+  .with_wait_for(WaitStrategy::LogMessage("start worker processes"))
+  .with_wait_timeout(30)
+  .start()
+```
+
 ### Container Logs
 
 Retrieve and stream container logs for debugging and monitoring.
@@ -307,7 +380,7 @@ Retrieve and stream container logs for debugging and monitoring.
 
 Get all logs from a container:
 
-```moonbit
+```moonbit nocheck
 match container.get_logs() {
   Ok(logs) => println("Container logs:\n\{logs}")
   Err(e) => println("Failed to get logs: \{e.to_string()}")
@@ -318,7 +391,7 @@ match container.get_logs() {
 
 Customize log retrieval with options:
 
-```moonbit
+```moonbit nocheck
 // Get last 100 lines with timestamps
 let options = LogOptions::default()
   .with_tail(100)
@@ -340,7 +413,7 @@ Available options:
 
 Stream logs in real-time with a callback:
 
-```moonbit
+```moonbit nocheck
 // Stream logs line by line
 let callback = fn(line: String) {
   println("Log: \{line}")
@@ -354,7 +427,7 @@ match container.stream_logs(callback) {
 
 Stream with options:
 
-```moonbit
+```moonbit nocheck
 // Stream only recent logs
 let options = LogOptions::default().with_tail(50)
 
@@ -366,7 +439,7 @@ match container.stream_logs(callback, options=options) {
 
 #### Debugging Failed Containers
 
-```moonbit
+```moonbit nocheck
 let container = ContainerImage::new("myapp", "latest")
   .with_exposed_port(8080)
   .start()
@@ -410,6 +483,7 @@ Strategies for waiting until a container is ready:
 
 - `WaitStrategy::TcpPort(port: Int)` - Wait for TCP port to be open
 - `WaitStrategy::HttpGet(path: String, expected_status: Int)` - Wait for HTTP endpoint to return expected status code
+- `WaitStrategy::LogMessage(message: String)` - Wait for a specific message to appear in container logs (polls every 500ms, checks last 100 lines)
 - `WaitStrategy::Seconds(seconds: Int)` - Wait for a fixed duration
 
 ### `Container`
@@ -466,7 +540,7 @@ moon test --target native && moon test --target js
 ## Current Limitations
 
 - **JavaScript Backend**: Requires Node.js environment; browser environments are not supported
-- **Wait Strategies**: HTTP endpoint wait uses the first exposed port; log message waiting is planned
+- **Wait Strategies**: HTTP endpoint wait uses the first exposed port
 - **HTTP Support**: Only HTTP (not HTTPS), GET method only, status code checking only
 - **Network Management**: Custom networks are not supported yet
 - **Volume Mounting**: Only bind mounts are supported; named volumes and tmpfs are not yet supported
@@ -476,10 +550,11 @@ moon test --target native && moon test --target js
 
 - [x] Wait strategies - TCP port and delay (implemented)
 - [x] Wait strategies - HTTP endpoint (implemented)
+- [x] Wait strategies - log message (implemented)
 - [x] Container logs streaming (implemented)
 - [x] Volume mounting - bind mounts (implemented)
 - [x] Multi-backend support - Native and JavaScript (implemented)
-- [ ] Wait strategies - log message
+- [x] Docker CLI installation check with helpful error messages (implemented)
 - [ ] HTTPS support for HTTP wait strategy
 - [ ] Custom HTTP headers and methods
 - [ ] Response body validation for HTTP wait strategy

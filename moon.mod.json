@@ -8,5 +8,6 @@
   "repository": "",
   "license": "Apache-2.0",
   "keywords": [],
-  "description": "Testcontainers implementation for MoonBit"
+  "description": ",containers implementation for MoonBit",
+  "exclude": ["docs", ".github", ".githooks"]
 }
