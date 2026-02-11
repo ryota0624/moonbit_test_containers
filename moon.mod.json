@@ -1,6 +1,6 @@
 {
   "name": "ryota0624/moonbit_test_containers",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "deps": {
     "moonbitlang/async": "0.16.6"
   },
