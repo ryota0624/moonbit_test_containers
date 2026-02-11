@@ -1,6 +1,26 @@
 // Container lifecycle management
 
 ///|
+/// Check if a string is a valid hexadecimal string (for container ID validation)
+fn is_hex_string(s : String) -> Bool {
+  if s.length() < 12 {
+    // Container IDs are at least 12 characters (short form)
+    return false
+  }
+  for i = 0; i < s.length(); i = i + 1 {
+    let c = s[i]
+    if not(
+        (c >= '0' && c <= '9') ||
+        (c >= 'a' && c <= 'f') ||
+        (c >= 'A' && c <= 'F'),
+      ) {
+      return false
+    }
+  }
+  true
+}
+
+///|
 /// Start a container based on the image configuration
 pub async fn ContainerImage::start(
   self : ContainerImage,
@@ -47,19 +67,34 @@ pub async fn ContainerImage::start(
         ),
       )
     Ok(output) => {
-      // Extract last non-empty line (container ID)
+      // Extract container ID from output
       // docker run -d may output multiple lines including pull progress
+      // Container ID is a hexadecimal string (at least 12 chars, usually 64)
       let lines = output.split("\n").to_array()
-      let mut last_line = ""
-      for i = lines.length() - 1; i >= 0; i = i - 1 {
+      let mut container_id = ""
+
+      // First, try to find a line that looks like a container ID
+      for i = 0; i < lines.length(); i = i + 1 {
         let line_view = lines[i].trim()
         let line = "\{line_view}"
-        if line.length() > 0 {
-          last_line = line
+        if is_hex_string(line) {
+          container_id = line
           break
         }
       }
-      last_line
+
+      // Fallback: use last non-empty line
+      if container_id == "" {
+        for i = lines.length() - 1; i >= 0; i = i - 1 {
+          let line_view = lines[i].trim()
+          let line = "\{line_view}"
+          if line.length() > 0 {
+            container_id = line
+            break
+          }
+        }
+      }
+      container_id
     }
   }
 
