@@ -46,7 +46,21 @@ pub async fn ContainerImage::start(
           "Failed to start container for image \{self.name}:\n\{e.to_string()}",
         ),
       )
-    Ok(c_id) => c_id
+    Ok(output) => {
+      // Extract last non-empty line (container ID)
+      // docker run -d may output multiple lines including pull progress
+      let lines = output.split("\n").to_array()
+      let mut last_line = ""
+      for i = lines.length() - 1; i >= 0; i = i - 1 {
+        let line_view = lines[i].trim()
+        let line = "\{line_view}"
+        if line.length() > 0 {
+          last_line = line
+          break
+        }
+      }
+      last_line
+    }
   }
 
   let container = { id: container_id, image: self, port_mappings: [] }
