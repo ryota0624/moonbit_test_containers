@@ -57,7 +57,7 @@ pub fn LogOptions::with_tail(Self, Int) -> Self
 pub fn LogOptions::with_timestamps(Self, Bool) -> Self
 pub fn LogOptions::with_until(Self, String) -> Self
 
-pub enum TestContainerError {
+pub(all) enum TestContainerError {
   DockerCommandFailed(String)
   ContainerNotFound(String)
   PortMappingFailed(String)
@@ -74,10 +74,11 @@ pub struct VolumeMount {
   read_only : Bool
 }
 
-pub enum WaitStrategy {
+pub(all) enum WaitStrategy {
   TcpPort(Int)
   Seconds(Int)
   HttpGet(String, Int)
+  LogMessage(String)
 }
 pub impl Eq for WaitStrategy
 pub impl Show for WaitStrategy
