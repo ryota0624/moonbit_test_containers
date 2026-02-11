@@ -1,6 +1,6 @@
 {
   "name": "ryota0624/moonbit_test_containers",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "deps": {
     "moonbitlang/async": "0.16.6"
   },
@@ -8,7 +8,7 @@
   "repository": "https://github.com/ryota0624/moonbit_test_containers",
   "license": "Apache-2.0",
   "keywords": ["containers", "docker", "test"],
-  "description": ",containers implementation for MoonBit",
-  "exclude": ["docs", ".github", ".githooks"],
+  "description": "Test containers implementation for MoonBit",
+  "exclude": ["docs/**", ".github/**", ".githooks/**"],
   "preferred-target": "native"
 }
