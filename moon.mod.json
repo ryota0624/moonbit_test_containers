@@ -1,14 +1,12 @@
 {
   "name": "ryota0624/moonbit_test_containers",
   "version": "0.1.0",
+  "deps": {
+    "moonbitlang/async": "0.16.6"
+  },
   "readme": "README.mbt.md",
   "repository": "",
   "license": "Apache-2.0",
   "keywords": [],
-  "description": "Testcontainers implementation for MoonBit",
-  "deps": {
-    "moonbitlang/async": {
-      "path": ".moonbit-async"
-    }
-  }
+  "description": "Testcontainers implementation for MoonBit"
 }

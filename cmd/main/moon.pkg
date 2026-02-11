@@ -1,0 +1,7 @@
+import {
+  "ryota0624/moonbit_test_containers" @lib,
+}
+
+options(
+  "is-main": true,
+)

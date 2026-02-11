@@ -1,0 +1,17 @@
+import {
+  "moonbitlang/async/process",
+  "moonbitlang/async",
+  "moonbitlang/async/http",
+  "moonbitlang/core/strconv",
+  "moonbitlang/core/test",
+  "moonbitlang/async/js_async",
+}
+
+options(
+  targets: {
+    "docker_js.mbt": [ "js" ],
+    "docker_native.mbt": [ "native" ],
+    "wait_strategy_js.mbt": [ "js" ],
+    "wait_strategy_native.mbt": [ "native" ],
+  },
+)

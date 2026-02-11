@@ -32,7 +32,7 @@ async fn wait_for_tcp_port(
     @async.sleep(poll_interval_ms) catch {
       _ => ()
     }
-  } else {
+  } nobreak {
     Err(
       WaitStrategyTimeout(
         "TCP port \{port} not ready after \{timeout_seconds} seconds",
@@ -67,7 +67,7 @@ async fn wait_for_http_endpoint(
     @async.sleep(poll_interval_ms) catch {
       _ => ()
     }
-  } else {
+  } nobreak {
     Err(
       WaitStrategyTimeout(
         "HTTP endpoint \{path} did not return status \{expected_status} after \{timeout_seconds} seconds",

@@ -64,7 +64,6 @@ pub async fn ContainerImage::start(
             Ok(())
           }
         }
-
       })
     })()
     return Err(
