@@ -52,13 +52,9 @@ pub async fn ContainerImage::start(
       ),
     )
   }
-
-  guard self.wait_strategy is Some(strategy) else {
-    return Ok(container)
-  }
-
+  guard self.wait_strategy is Some(strategy) else { return Ok(container) }
   guard wait_for_container(container, strategy, self.wait_timeout) is Ok(_) else {
-    defer fn() -> Unit noraise {
+    defer (fn() -> Unit noraise {
       run_async(async fn() -> Unit noraise {
         let _ = container.cleanup() catch {
           _ => {
@@ -68,13 +64,11 @@ pub async fn ContainerImage::start(
             Ok(())
           }
         }
-      })
-    }()
 
+      })
+    })()
     return Err(
-      DockerCommandFailed(
-        "Container \{container_id} failed to become ready",
-      ),
+      DockerCommandFailed("Container \{container_id} failed to become ready"),
     )
   }
   Ok(container)
@@ -203,5 +197,6 @@ pub async fn Container::cleanup(
   self.remove()
 }
 
-///| `run_async` spawn a new coroutine and execute an async function in it
+///|
+/// `run_async` spawn a new coroutine and execute an async function in it
 fn run_async(f : async () -> Unit noraise) -> Unit = "%async.run"

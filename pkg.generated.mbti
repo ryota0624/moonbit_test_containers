@@ -2,6 +2,9 @@
 package "ryota0624/moonbit_test_containers"
 
 // Values
+pub async fn exec_docker(Array[String]) -> Result[String, TestContainerError] noraise
+
+pub fn parse_port_mapping(String) -> Int?
 
 // Errors
 
@@ -14,7 +17,7 @@ pub struct Container {
 pub async fn Container::cleanup(Self) -> Result[Unit, TestContainerError]
 pub fn Container::get_host_port(Self, Int) -> Int?
 pub fn Container::get_id(Self) -> String
-pub async fn Container::get_logs(Self) -> Result[String, TestContainerError]
+pub async fn Container::get_logs(Self) -> Result[String, TestContainerError] noraise
 pub async fn Container::get_logs_with_options(Self, LogOptions) -> Result[String, TestContainerError]
 pub async fn Container::remove(Self) -> Result[Unit, TestContainerError]
 pub async fn Container::stop(Self) -> Result[Unit, TestContainerError]
@@ -31,7 +34,7 @@ pub struct ContainerImage {
   volumes : Array[VolumeMount]
 }
 pub fn ContainerImage::new(String, String) -> Self
-pub async fn ContainerImage::start(Self) -> Result[Container, TestContainerError]
+pub async fn ContainerImage::start(Self) -> Result[Container, TestContainerError] noraise
 pub fn ContainerImage::with_cmd(Self, Array[String]) -> Self
 pub fn ContainerImage::with_env_var(Self, String, String) -> Self
 pub fn ContainerImage::with_exposed_port(Self, Int) -> Self

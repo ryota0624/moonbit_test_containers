@@ -76,6 +76,15 @@ pub async fn exec_docker(
   if status == 0 {
     // Success: return trimmed output
     Ok(output_str)
+    // Check if error indicates Docker CLI is not installed
+  } else if output_str.contains("ENOENT") ||
+    output_str.contains("not found") ||
+    output_str.contains("command not found") {
+    Err(
+      DockerCommandFailed(
+        "Docker CLI is not installed or not available in PATH.\n\nPlease install Docker to use this library:\n- macOS: https://docs.docker.com/desktop/install/mac-install/\n- Windows: https://docs.docker.com/desktop/install/windows-install/\n- Linux: https://docs.docker.com/desktop/install/linux-install/\n\nAfter installation, make sure 'docker' command is available in your PATH.",
+      ),
+    )
   } else {
     // Failed: return error with details
     Err(DockerCommandFailed(output_str))
