@@ -53,22 +53,23 @@ pub async fn ContainerImage::start(
     )
   }
   guard self.wait_strategy is Some(strategy) else { return Ok(container) }
-  guard wait_for_container(container, strategy, self.wait_timeout) is Ok(_) else {
-    defer (fn() -> Unit noraise {
-      run_async(async fn() -> Unit noraise {
-        let _ = container.cleanup() catch {
-          _ => {
-            println(
-              "Failed to cleanup container \{container.get_id()} after wait failure",
-            )
-            Ok(())
+  match wait_for_container(container, strategy, self.wait_timeout) {
+    Ok(_) => ()
+    Err(wait_error) => {
+      defer (fn() -> Unit noraise {
+        run_async(async fn() -> Unit noraise {
+          let _ = container.cleanup() catch {
+            _ => {
+              println(
+                "Failed to cleanup container \{container.get_id()} after wait failure",
+              )
+              Ok(())
+            }
           }
-        }
-      })
-    })()
-    return Err(
-      DockerCommandFailed("Container \{container_id} failed to become ready"),
-    )
+        })
+      })()
+      return Err(wait_error)
+    }
   }
   Ok(container)
 }

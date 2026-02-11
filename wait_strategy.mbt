@@ -18,7 +18,7 @@ async fn wait_for_tcp_port(
   timeout_seconds : Int,
 ) -> Result[Unit, TestContainerError] noraise {
   // Poll every 500ms
-  // NOTE: Simplified error handling to work around C code generation issue
+  // NOTE: Port checks are serialized by semaphore to prevent concurrent process overload
   let poll_interval_ms = 500
   let max_attempts = timeout_seconds * 1000 / poll_interval_ms
   for attempt = 0; attempt < max_attempts; attempt = attempt + 1 {
@@ -51,7 +51,7 @@ async fn wait_for_http_endpoint(
   timeout_seconds : Int,
 ) -> Result[Unit, TestContainerError] noraise {
   // Poll every 500ms
-  // NOTE: Simplified error handling to work around C code generation issue
+  // NOTE: Port checks are serialized by semaphore to prevent concurrent process overload
   let poll_interval_ms = 500
   let max_attempts = timeout_seconds * 1000 / poll_interval_ms
   for attempt = 0; attempt < max_attempts; attempt = attempt + 1 {
@@ -71,6 +71,48 @@ async fn wait_for_http_endpoint(
     Err(
       WaitStrategyTimeout(
         "HTTP endpoint \{path} did not return status \{expected_status} after \{timeout_seconds} seconds",
+      ),
+    )
+  }
+}
+
+///|
+/// Wait for log message to appear in container logs with timeout
+async fn wait_for_log_message(
+  container : Container,
+  message : String,
+  timeout_seconds : Int,
+) -> Result[Unit, TestContainerError] noraise {
+  // Poll every 500ms (consistent with other wait strategies)
+  let poll_interval_ms = 500
+  let max_attempts = timeout_seconds * 1000 / poll_interval_ms
+  for attempt = 0; attempt < max_attempts; attempt = attempt + 1 {
+    // Get recent logs (last 100 lines to limit memory usage)
+    let log_options = LogOptions::default().with_tail(100)
+
+    // Try to get logs and check for message - treat any error as "not ready yet"
+    let message_found = {
+      let logs_result = container.get_logs_with_options(log_options) catch {
+        _ => Err(DockerCommandFailed("Log retrieval failed"))
+      }
+      match logs_result {
+        Ok(logs) => logs.contains(message)
+        Err(_) => false
+      }
+    }
+
+    if message_found {
+      return Ok(())
+    }
+
+    // Sleep between attempts - ignore sleep errors
+    @async.sleep(poll_interval_ms) catch {
+      _ => ()
+    }
+  } nobreak {
+    Err(
+      WaitStrategyTimeout(
+        "Log message '\{message}' not found after \{timeout_seconds} seconds",
       ),
     )
   }
@@ -133,5 +175,8 @@ async fn wait_for_container(
           )
       }
     }
+    LogMessage(message) =>
+      // Wait for log message to appear
+      wait_for_log_message(container, message, timeout)
   }
 }

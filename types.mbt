@@ -7,6 +7,7 @@ pub enum WaitStrategy {
   TcpPort(Int) // Wait for TCP port to be open
   Seconds(Int) // Wait for a fixed number of seconds
   HttpGet(String, Int) // Wait for HTTP endpoint (path, expected_status_code)
+  LogMessage(String) // Wait for a specific message in container logs
 } derive(Show, Eq)
 
 ///|
