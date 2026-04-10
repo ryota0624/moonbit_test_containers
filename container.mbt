@@ -28,7 +28,11 @@ pub async fn ContainerImage::start(
   // Build docker run command arguments
   let args : Array[String] = ["run", "-d"]
 
-  // Add port mappings (-P for random host ports)
+  // Add port mappings (--expose + -P for random host ports)
+  for i = 0; i < self.exposed_ports.length(); i = i + 1 {
+    args.push("--expose")
+    args.push(self.exposed_ports[i].to_string())
+  }
   if self.exposed_ports.length() > 0 {
     args.push("-P")
   }
