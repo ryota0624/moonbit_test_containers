@@ -25,10 +25,10 @@ extern "js" fn AnyValue::as_bool(self : AnyValue) -> Bool =
 /// Execute docker command synchronously using Node.js child_process.execSync
 ///
 /// Returns: Array[AnyValue] where [exit_status, output]
-extern "js" fn exec_docker_sync(
+extern "js" fn exec_docker_sync_ffi(
   command : String,
-  args : Array[String],
-) -> Array[AnyValue] =
+  args : FixedArray[String],
+) -> FixedArray[AnyValue] =
   #| (command, args) => {
   #|   // Import Node.js child_process module
   #|   const { spawnSync } = require('child_process');
@@ -57,6 +57,13 @@ extern "js" fn exec_docker_sync(
   #|     return [result.status, output];
   #|   }
   #| }
+
+fn exec_docker_sync(
+  command : String,
+  args : Array[String],
+) -> Array[AnyValue] {
+  Array::from_fixed_array(exec_docker_sync_ffi(command, FixedArray::from_array(args)))
+}
 
 ///|
 /// Execute docker command using JavaScript FFI
